@@ -5,4 +5,4 @@ __pycache__
 autoplaylist/chromedriver-win64/
 feature_vectors.json
 vector_mapping.json
-*.aup3
+djs/*

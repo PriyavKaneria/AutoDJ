@@ -18,3 +18,14 @@ print("Segment boundaries in timestamps (seconds): \n", segment_boundaries_times
 
 librosa_timestamps = librosa.frames_to_time(segment_boundaries_indices, sr=sr, hop_length=hop_length)
 print("\nSegment boundaries in timestamps using librosa (seconds): \n", librosa_timestamps)
+
+samples = librosa.frames_to_samples(segment_boundaries_indices, hop_length=hop_length)
+print("\nSegment boundaries in samples using librosa: \n", samples)
+
+time = 25000
+frame_number = librosa.time_to_frames(time / 1000, sr=sr, hop_length=hop_length)
+print("Frame number: ", frame_number)
+
+time = librosa.frames_to_time(frame_number, sr=sr, hop_length=hop_length)
+print("Time: ", time)
+

@@ -1,5 +1,6 @@
 # AIDJ
 
+```
 database
     - id : str
     - url : str
@@ -28,3 +29,4 @@ audio_features
     - frequency_frames : list[duration*100]
     - frequency : float
     - key : str
+```

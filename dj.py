@@ -1,7 +1,7 @@
 import pickle
 import os
 from typing import TypedDict
-from librosa import frames_to_time
+from librosa import frames_to_time, time_to_frames
 import numpy as np
 from polymath.polymath import Video
 import warnings
@@ -9,6 +9,7 @@ import argparse
 from collections import Counter
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning) 
 
+from song_mixer import mix_audio_with_transition
 from utils import *
 
 # Create the parser
@@ -93,15 +94,21 @@ def generate_feature_vectors(song_database: Database):
         if audio_features is not None:
             # For every segment in the song, extract the tempo, pitch, timbre, and intensity
             # and create a feature vector mapped to the song id and segment index
-            for i in range(len(audio_features.beats) - 1):
+            for frame in audio_features.segments_boundaries:
+                hop_length = int(4096 * 0.75)
+                sr = 22050
+                segment_timestamp = frames_to_time(frame, sr=sr, hop_length=hop_length)
+                # find the floor beat index for the segment
+                # beats need to be converted to floats for comparison
+                beat_idx = np.where(np.insert(audio_features.beats, 0, 0.) <= segment_timestamp)[0][-1] - 1
                 feature_vector = [
                     [audio_features.tempo],
-                    audio_features.pitch_frames[i].tolist()[0],
-                    audio_features.timbre_frames[i].tolist()[0],
-                    audio_features.intensity_frames[i].tolist()[0]
+                    audio_features.pitch_frames[beat_idx].tolist()[0],
+                    audio_features.timbre_frames[beat_idx].tolist()[0],
+                    audio_features.intensity_frames[beat_idx].tolist()[0]
                 ]
                 feature_vectors.append(feature_vector)
-                vector_mapping.append((song_id, i))
+                vector_mapping.append((song_id, beat_idx))
     with open('feature_vectors.pkl', 'wb') as f:
         pickle.dump(feature_vectors, f)
     with open('vector_mapping.pkl', 'wb') as f:
@@ -154,20 +161,31 @@ def find_nearest_neighbors(skip_idxs, features, query_feature, k=5):
 
     return nearest_indices
 
-    
-
 # Function to find the best next song after a segment
 def find_next_song(current_song_id: str, current_segment_end: int):
+    '''
+    Find the best next song to play after a given segment in the current song.
+    
+    Args:
+        current_song_id (str): The ID of the current song.
+        current_segment_end (int): The end time (in milliseconds) of the current segment.
+    
+    Returns:
+        list: A list of tuples containing the ID, name, and start timestamp of the best next songs.
+    '''
     current_audio_features = load_audio_features(current_song_id)
     if current_audio_features is None:
         return []
 
+    # Calulate the beat index for the current segment end
+    beat_idx = np.where(np.insert(current_audio_features.beats, 0, 0.) <= current_segment_end / 1000)[0][-1] - 1
+
     # Calculate tempo, pitch, timbre, and intensity at the end of the current segment
     current_segment_end_features = {
         'tempo': [current_audio_features.tempo],
-        'pitch': current_audio_features.pitch_frames[current_segment_end],
-        'timbre': current_audio_features.timbre_frames[current_segment_end],
-        'intensity': current_audio_features.intensity_frames[current_segment_end]
+        'pitch': current_audio_features.pitch_frames[beat_idx],
+        'timbre': current_audio_features.timbre_frames[beat_idx],
+        'intensity': current_audio_features.intensity_frames[beat_idx]
     }
 
     # Load feature vectors
@@ -189,16 +207,22 @@ def find_next_song(current_song_id: str, current_segment_end: int):
         song_metadata = song_database[next_song]
         audio_features = load_audio_features(next_song)
         beats = audio_features.beats
-        start_timestamp = beats[beat_offset]
+        start_timestamp = float(beats[beat_offset]) * 1000
         best_next_songs.append((next_song, song_metadata.name, start_timestamp))
 
     return best_next_songs
 
-# Example usage
-current_song_id : str = '2uUmHTgT65I'
-current_segment_end : int = 25
+def main():
+    # Example usage
+    current_song_id : str = '2uUmHTgT65I'
+    current_segment_end : int = 25000
 
-best_next_songs = find_next_song(current_song_id, current_segment_end)
-for song_id, song_name, start_timestamp in best_next_songs:
-    readable_seconds = seconds_to_readable(start_timestamp)
-    print(f"Id: {song_id}, Name: {song_name}, Start Timestamp: {readable_seconds}")
+    best_next_songs = find_next_song(current_song_id, current_segment_end)
+    for song_id, song_name, start_timestamp in best_next_songs:
+        readable_seconds = milliseconds_to_readable(start_timestamp)
+        print(f"Id: {song_id}, Name: {song_name}, Start Timestamp: {readable_seconds}")
+        mixed_audio_path = mix_audio_with_transition(f"polymath/library/{current_song_id}.wav", f"polymath/library/{song_id}.wav", current_segment_end, start_timestamp, "crossfade", 2000)
+        print(f"Mixed audio path: {mixed_audio_path}")
+
+if __name__ == "__main__":
+    main()

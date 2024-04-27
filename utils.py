@@ -43,19 +43,20 @@ def print_type_structure(obj, indent=0, depth=None):
                 print_type_structure(item, indent + 2, depth - 1 if depth is not None else None)
 
     
-def seconds_to_readable(seconds):
-    hours = seconds // 3600
-    remaining_seconds = seconds % 3600
+def milliseconds_to_readable(milliseconds):
+    hours = milliseconds // 3600
+    remaining_seconds = milliseconds % 3600
     minutes = remaining_seconds // 60
-    seconds = remaining_seconds % 60
+    milliseconds = remaining_seconds % 60
+    milliseconds = (milliseconds - int(milliseconds)) * 1000
     
     if hours > 0:
-        return f"{hours} hour{'s' if hours > 1 else ''}, {minutes} minute{'s' if minutes > 1 else ''}, {seconds} second{'s' if seconds > 1 else ''}"
+        return f"{hours} hour{'s' if hours > 1 else ''}, {minutes} minute{'s' if minutes > 1 else ''}, {milliseconds} second{'s' if milliseconds > 1 else ''}"
     elif minutes > 0:
-        return f"{minutes} minute{'s' if minutes > 1 else ''}, {seconds} second{'s' if seconds > 1 else ''}"
+        return f"{minutes} minute{'s' if minutes > 1 else ''}, {milliseconds} second{'s' if milliseconds > 1 else ''}, {milliseconds:.2f} ms"
     else:
-        return f"{seconds} second{'s' if seconds > 1 else ''}"
-    
+        return f"{milliseconds} second{'s' if milliseconds > 1 else ''}, {milliseconds:.2f} ms"
+
 # Not used as replaced by librosa's frames_to_time function
 def transform_segment_boundaries_to_seconds(segment_boundaries_indices: np.array):
     """
