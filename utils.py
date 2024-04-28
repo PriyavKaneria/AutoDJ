@@ -1,3 +1,4 @@
+from librosa import frames_to_time
 import numpy as np
 from collections import Sequence
 from scipy.spatial.distance import euclidean
@@ -44,11 +45,12 @@ def print_type_structure(obj, indent=0, depth=None):
 
     
 def milliseconds_to_readable(milliseconds):
-    hours = milliseconds // 3600
-    remaining_seconds = milliseconds % 3600
-    minutes = remaining_seconds // 60
-    milliseconds = remaining_seconds % 60
-    milliseconds = (milliseconds - int(milliseconds)) * 1000
+    hours = milliseconds // 3600000
+    milliseconds %= 3600000
+    minutes = milliseconds // 60000
+    milliseconds %= 60000
+    seconds = milliseconds // 1000
+    milliseconds %= 1000
     
     if hours > 0:
         return f"{hours} hour{'s' if hours > 1 else ''}, {minutes} minute{'s' if minutes > 1 else ''}, {milliseconds} second{'s' if milliseconds > 1 else ''}"
@@ -57,25 +59,24 @@ def milliseconds_to_readable(milliseconds):
     else:
         return f"{milliseconds} second{'s' if milliseconds > 1 else ''}, {milliseconds:.2f} ms"
 
-# Not used as replaced by librosa's frames_to_time function
-def transform_segment_boundaries_to_seconds(segment_boundaries_indices: np.array):
+def custom_frame_to_time(frame: int) -> float:
     """
-    Transform segment boundaries from sample indices to seconds.
-    
+    Converts a frame number to a timestamp in seconds.
+
     Args:
-        segment_boundaries_indices (np.array): An array of segment boundaries in sample indices.
-        
+        frame (int): The frame number.
+
     Returns:
-        np.array: An array of segment boundaries in seconds.
+        float: The timestamp in seconds.
     """
     # Hop length and sampling rate
     hop_length = int(4096 * 0.75)
     sr = 22050
     
-    # Convert indices to time frames
-    segment_boundaries_frames = segment_boundaries_indices * hop_length
+    # # Convert indices to time frames
+    # segment_boundaries_frames = segment_boundaries_indices * hop_length
     
-    # Convert time frames to timestamps
-    segment_boundaries_timestamps = segment_boundaries_frames / sr
-    
-    return segment_boundaries_timestamps
+    # # Convert time frames to timestamps
+    # segment_boundaries_timestamps = segment_boundaries_frames / sr
+
+    return frames_to_time(frame, sr=sr, hop_length=hop_length)

@@ -1,7 +1,6 @@
 import pickle
 import os
 from typing import TypedDict
-from librosa import frames_to_time, time_to_frames
 import numpy as np
 from polymath.polymath import Video
 import warnings
@@ -95,9 +94,7 @@ def generate_feature_vectors(song_database: Database):
             # For every segment in the song, extract the tempo, pitch, timbre, and intensity
             # and create a feature vector mapped to the song id and segment index
             for frame in audio_features.segments_boundaries:
-                hop_length = int(4096 * 0.75)
-                sr = 22050
-                segment_timestamp = frames_to_time(frame, sr=sr, hop_length=hop_length)
+                segment_timestamp = custom_frame_to_time(frame)
                 # find the floor beat index for the segment
                 # beats need to be converted to floats for comparison
                 beat_idx = np.where(np.insert(audio_features.beats, 0, 0.) <= segment_timestamp)[0][-1] - 1
@@ -215,12 +212,18 @@ def find_next_song(current_song_id: str, current_segment_end: int):
 def main():
     # Example usage
     current_song_id : str = '2uUmHTgT65I'
-    current_segment_end : int = 25000
-
-    best_next_songs = find_next_song(current_song_id, current_segment_end)
-    for song_id, song_name, start_timestamp in best_next_songs:
-        readable_seconds = milliseconds_to_readable(start_timestamp)
-        print(f"Id: {song_id}, Name: {song_name}, Start Timestamp: {readable_seconds}")
+    song_features = load_audio_features(current_song_id)
+    # loop through all segments and find the best next song for each segment
+    for i, boundary in enumerate(song_features.segments_boundaries[1:-1]):
+        current_segment_end = custom_frame_to_time(boundary) * 1000
+        print(f"Segment {i + 1} : {current_segment_end}")
+        best_next_songs = find_next_song(current_song_id, current_segment_end)
+        for song_id, song_name, start_timestamp in best_next_songs:
+            readable_seconds = milliseconds_to_readable(start_timestamp)
+            print(f"Id: {song_id}, Name: {song_name}, Start Timestamp: {readable_seconds}")
+        print()
+        # mix the first best next song with the current segment
+        song_id, song_name, start_timestamp = best_next_songs[0]
         mixed_audio_path = mix_audio_with_transition(f"polymath/library/{current_song_id}.wav", f"polymath/library/{song_id}.wav", current_segment_end, start_timestamp, "crossfade", 2000)
         print(f"Mixed audio path: {mixed_audio_path}")
 

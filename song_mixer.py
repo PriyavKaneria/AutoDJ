@@ -37,6 +37,9 @@ def mix_audio_with_transition(audio1_path, audio2_path, audio1_endtime, audio2_s
     end_segment = audio2[audio2_starttime:]
 
     if transition == "crossfade":
+        # check if transition duration is less than half of the shortest segment
+        if transition_duration > len(start_segment) / 2 or transition_duration > len(end_segment) / 2:
+            transition_duration = min(len(start_segment), len(end_segment)) // 2
         # a1[0:-t/2] + crossfade(a1[-t/2:], a2[:t/2], t) + a2[t/2:]
         combined = start_segment[:-transition_duration/2] + crossfade(start_segment[-transition_duration/2:], end_segment[:transition_duration/2], transition_duration) + end_segment[transition_duration/2:]
     elif transition == "fade_out":
