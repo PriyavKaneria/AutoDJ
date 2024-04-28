@@ -53,11 +53,11 @@ def milliseconds_to_readable(milliseconds):
     milliseconds %= 1000
     
     if hours > 0:
-        return f"{hours} hour{'s' if hours > 1 else ''}, {minutes} minute{'s' if minutes > 1 else ''}, {milliseconds} second{'s' if milliseconds > 1 else ''}"
+        return f"{hours} hour{'s' if hours > 1 else ''}, {minutes} minute{'s' if minutes > 1 else ''}, {seconds} second{'s' if milliseconds > 1 else ''}"
     elif minutes > 0:
-        return f"{minutes} minute{'s' if minutes > 1 else ''}, {milliseconds} second{'s' if milliseconds > 1 else ''}, {milliseconds:.2f} ms"
+        return f"{minutes} minute{'s' if minutes > 1 else ''}, {seconds} second{'s' if milliseconds > 1 else ''}, {milliseconds:.2f} ms"
     else:
-        return f"{milliseconds} second{'s' if milliseconds > 1 else ''}, {milliseconds:.2f} ms"
+        return f"{seconds} second{'s' if milliseconds > 1 else ''}, {milliseconds:.2f} ms"
 
 def custom_frame_to_time(frame: int) -> float:
     """

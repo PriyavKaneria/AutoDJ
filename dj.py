@@ -213,10 +213,16 @@ def main():
     # Example usage
     current_song_id : str = '2uUmHTgT65I'
     song_features = load_audio_features(current_song_id)
+    print("------------------------------------------------------------")
+    print("------------------------- AI DJ ----------------------------")
+    print("------------------------------------------------------------")
+    print("------------------------------------------------------------")
+    print(f"Suggesting for song: {song_database[current_song_id].name}")
+    print("------------------------------------------------------------")
     # loop through all segments and find the best next song for each segment
     for i, boundary in enumerate(song_features.segments_boundaries[1:-1]):
         current_segment_end = custom_frame_to_time(boundary) * 1000
-        print(f"Segment {i + 1} : {current_segment_end}")
+        print(f"Segment {i + 1} at {current_segment_end / 1000} seconds")
         best_next_songs = find_next_song(current_song_id, current_segment_end)
         for song_id, song_name, start_timestamp in best_next_songs:
             readable_seconds = milliseconds_to_readable(start_timestamp)
@@ -226,6 +232,7 @@ def main():
         song_id, song_name, start_timestamp = best_next_songs[0]
         mixed_audio_path = mix_audio_with_transition(f"polymath/library/{current_song_id}.wav", f"polymath/library/{song_id}.wav", current_segment_end, start_timestamp, "crossfade", 2000)
         print(f"Mixed audio path: {mixed_audio_path}")
+        print("------------------------------------------------------------")
 
 if __name__ == "__main__":
     main()
