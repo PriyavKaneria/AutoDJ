@@ -6,7 +6,7 @@ router = APIRouter()
 
 @router.get("/stream/{audio_id}")
 def stream_audio(audio_id: str):
-    audio_file = f"server/audio_files/{audio_id}.mp3"
+    audio_file = f"server/../polymath/library/{audio_id}.aac"
     if not os.path.exists(audio_file):
         return {"error": "Audio file not found"}
 

@@ -1,11 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import WaveSurfer from 'wavesurfer.js';
+	import type { LibrarySong } from '$lib/types/LibrarySong';
 
-	export let track;
-	export let index;
+	export let songData: LibrarySong = {
+		id: '',
+		url: '',
+		name: '',
+		video: '',
+		audio: ''
+	}
+	export let songURL: string = '';
 
-	let waveformContainer : HTMLDivElement;
+	let waveformContainer: HTMLDivElement;
 	let wavesurfer: WaveSurfer;
 
 	onMount(() => {
@@ -13,11 +20,11 @@
 			container: waveformContainer,
 			waveColor: 'violet',
 			progressColor: 'purple',
-			dragToSeek: true,
+			dragToSeek: true
 		});
 
 		// Load the audio file or waveform data for the track
-		wavesurfer.load("http://localhost:8000/stream/" + track.id);
+		wavesurfer.load(songURL);
 
 		// listen to space key to play/pause the track
 		window.addEventListener('keydown', (event) => {
@@ -29,28 +36,6 @@
 	});
 </script>
 
-<div class="track">
-	<div class="track-info">
-		<span>{index + 1}. {track.name}</span>
-		<!-- Add any additional track controls or options here -->
-	</div>
-	<div class="waveform" bind:this={waveformContainer} />
+<div class="flex items-center w-full mb-4">
+	<div class="flex-grow bg-transparent" bind:this={waveformContainer} />
 </div>
-
-<style>
-	.track {
-		display: flex;
-		align-items: center;
-		margin-bottom: 1rem;
-	}
-
-	.track-info {
-		margin-right: 1rem;
-		font-weight: bold;
-	}
-
-	.waveform {
-		flex-grow: 1;
-		background-color: #f0f0f0;
-	}
-</style>

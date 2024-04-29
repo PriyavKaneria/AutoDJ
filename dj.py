@@ -1,4 +1,4 @@
-import pickle
+import dill as pickle
 import os
 from typing import TypedDict
 import numpy as np
