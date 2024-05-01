@@ -1,4 +1,3 @@
-
 from typing import TypedDict
 from server.models.video import Video
 
