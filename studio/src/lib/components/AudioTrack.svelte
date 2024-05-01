@@ -14,12 +14,16 @@
 	};
 	export let songURL: string = '';
 	export let analyzeSong: () => void;
+	export let wavesurfer: WaveSurfer;
 
 	let waveformContainer: HTMLDivElement;
-	let wavesurfer: WaveSurfer;
 
 	$: loadingSong = false;
 	$: loadedSong = false;
+
+	// $: () => {
+	// 	console.log(audioFeatures);
+	// };
 
 	onMount(() => {
 		wavesurfer = WaveSurfer.create({

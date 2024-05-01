@@ -4,10 +4,14 @@
 	import { Actions, Save, Share } from '$lib/components/navbar';
 	import SongSelector from '$lib/components/SongSelector.svelte';
 	import type { PageData } from './$types';
-	import type { LibrarySong } from '$lib/types/LibrarySong';
+	import type { LibrarySong, AudioFeatures } from '$lib/types';
 	import AudioTrack from '$lib/components/AudioTrack.svelte';
 	import { enhance } from '$app/forms';
-	import { json, type ActionResult } from '@sveltejs/kit';
+	import { type ActionResult } from '@sveltejs/kit';
+	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
+	import WaveSurfer from 'wavesurfer.js';
+	import type { GenericPlugin } from 'wavesurfer.js/dist/base-plugin.js';
+	import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
 
 	let baseSong = '';
 	$: selectedSong = '';
@@ -16,14 +20,52 @@
 	$: formLoading = false;
 
 	$: songURL = '';
+	$: analyzingSong = false;
 
-	function handleForm(result: ActionResult) {
+	const handleForm = (result: ActionResult) => {
 		if (result.type === 'success' && result.data) {
 			if (result.data.songURL) {
 				songURL = result.data.songURL;
 			}
 		}
-	}
+	};
+
+	let analyzeFormButton: HTMLButtonElement;
+
+	const analyzeSong = async () => {
+		analyzeFormButton.click();
+		analyzingSong = true;
+	};
+
+	$: audioFeatures = {} as AudioFeatures;
+	let wavesurfer: WaveSurfer;
+	let wsRegions: RegionsPlugin;
+
+	const handleSongSegments = (result: ActionResult) => {
+		if (result.type === 'success' && result.data) {
+			if (result.data.audioFeatures) {
+				setTimeout(() => {
+					analyzingSong = false;
+					audioFeatures = result?.data?.audioFeatures;
+					loadSegmentMarkers();
+				}, 2000);
+			}
+		}
+	};
+
+	const loadSegmentMarkers = () => {
+		if (!analyzingSong && audioFeatures) {
+			wsRegions = wavesurfer.registerPlugin(RegionsPlugin.create());
+			audioFeatures.segments_boundaries.forEach((boundary) => {
+				wsRegions.addRegion({
+					start: boundary,
+					color: 'black',
+					drag: false,
+					resize: false
+				});
+			});
+		}
+	};
 
 	export let data: PageData;
 </script>
@@ -89,9 +131,40 @@
 						<!-- Display base song -->
 						<span class="text-md font-medium leading-none">Song - {songData.name}</span>
 						<div class="flex items-center space-x-2">
-							<AudioTrack {songData} {songURL} />
+							<AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer />
 							<Button on:click={() => (baseSong = '')}>Change</Button>
 						</div>
+						<form
+							method="post"
+							action="?/analyzeSong"
+							use:enhance={() => {
+								return async ({ update, result }) => {
+									update();
+									handleSongSegments(result);
+									handleForm(result);
+								};
+							}}
+						>
+							<input type="hidden" name="songId" value={baseSong} />
+							<button type="submit" class="hidden" bind:this={analyzeFormButton}>Analyze</button>
+						</form>
+						{#if analyzingSong}
+							<div class="flex items-center justify-center relative space-x-2 h-32 overflow-hidden">
+								<LottiePlayer
+									src={'/audio_wave_loader.json'}
+									autoplay={true}
+									loop={true}
+									controls={false}
+									background="transparent"
+									renderer="svg"
+								/>
+								<span
+									class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lg text-secondary-foreground"
+								>
+									Analyzing song...
+								</span>
+							</div>
+						{/if}
 					{/if}
 				</div>
 			</div>

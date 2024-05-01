@@ -43,7 +43,6 @@ def print_type_structure(obj, indent=0, depth=None):
             for item in obj.flat:
                 print_type_structure(item, indent + 2, depth - 1 if depth is not None else None)
 
-    
 def milliseconds_to_readable(milliseconds):
     hours = milliseconds // 3600000
     milliseconds %= 3600000
