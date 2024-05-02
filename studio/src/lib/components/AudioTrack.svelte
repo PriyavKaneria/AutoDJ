@@ -99,7 +99,7 @@
 			: 'block'} border border-dashed border-muted-foreground"
 		bind:this={waveformContainer}
 	/>
-	<div class="absolute bottom-0 left-0 flex items-center gap-1">
+	<div class="absolute bottom-0 left-0 flex items-center gap-1 z-10">
 		<span class="text-xs text-white bg-black p-1 rounded-tr-lg" id="cursor-time">00:00</span>
 	</div>
 </div>

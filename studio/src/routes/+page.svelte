@@ -10,7 +10,6 @@
 	import { type ActionResult } from '@sveltejs/kit';
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
 	import WaveSurfer from 'wavesurfer.js';
-	import type { GenericPlugin } from 'wavesurfer.js/dist/base-plugin.js';
 	import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
 
 	let baseSong = '';
@@ -63,6 +62,12 @@
 					drag: false,
 					resize: false
 				});
+			});
+			wsRegions.on('region-clicked', (region, e) => {
+				e.stopPropagation();
+				console.log(region.start);
+				// region.play();
+				wavesurfer.setTime(region.start);
 			});
 		}
 	};

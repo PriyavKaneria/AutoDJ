@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from server.routers import audio, library
+from server.routers import audio, library, search
 
 app = FastAPI()
 
@@ -19,6 +19,7 @@ app.add_middleware(
 )
 app.include_router(audio.router)
 app.include_router(library.router)
+app.include_router(search.router)
 
 @app.get("/")
 async def root():
