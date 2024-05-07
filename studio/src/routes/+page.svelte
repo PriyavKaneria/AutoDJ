@@ -4,7 +4,7 @@
 	import { Actions, Save, Share } from '$lib/components/navbar';
 	import SongSelector from '$lib/components/SongSelector.svelte';
 	import type { PageData } from './$types';
-	import type { LibrarySong, AudioFeatures } from '$lib/types';
+	import type { LibrarySong, AudioFeatures, RecommendedSong } from '$lib/types';
 	import AudioTrack from '$lib/components/AudioTrack.svelte';
 	import { enhance } from '$app/forms';
 	import { type ActionResult } from '@sveltejs/kit';
@@ -43,14 +43,23 @@
 	const handleSongSegments = (result: ActionResult) => {
 		if (result.type === 'success' && result.data) {
 			if (result.data.audioFeatures) {
-				setTimeout(() => {
-					analyzingSong = false;
-					audioFeatures = result?.data?.audioFeatures;
-					loadSegmentMarkers();
-				}, 2000);
+				// setTimeout(() => {
+				analyzingSong = false;
+				audioFeatures = result?.data?.audioFeatures;
+				loadSegmentMarkers();
+				// }, 2000);
 			}
 		}
 	};
+
+	let fetchRecommendationsButton: HTMLButtonElement;
+	$: currentSegmentEnd = 0;
+	$: fetchingRecommendations = false;
+
+	$: if (currentSegmentEnd !== 0) {
+		fetchRecommendationsButton.click();
+		fetchingRecommendations = true;
+	}
 
 	const loadSegmentMarkers = () => {
 		if (!analyzingSong && audioFeatures) {
@@ -65,10 +74,31 @@
 			});
 			wsRegions.on('region-clicked', (region, e) => {
 				e.stopPropagation();
-				console.log(region.start);
 				// region.play();
 				wavesurfer.setTime(region.start);
+				currentSegmentEnd = region.start;
 			});
+			wavesurfer.on('timeupdate', () => {
+				const currentTime = wavesurfer.getCurrentTime();
+				const currentSegment =
+					audioFeatures.segments_boundaries.findLast((boundary) => {
+						return currentTime >= boundary;
+					}) || 0;
+				if (currentSegmentEnd !== currentSegment) {
+					currentSegmentEnd = currentSegment;
+				}
+			});
+		}
+	};
+
+	let nextBestSongs: RecommendedSong[] = [];
+
+	const handleSongRecommendation = (result: ActionResult) => {
+		if (result.type === 'success' && result.data) {
+			if (result.data.nextBestSongs) {
+				nextBestSongs = result.data.nextBestSongs;
+				fetchingRecommendations = false;
+			}
 		}
 	};
 
@@ -136,40 +166,87 @@
 						<!-- Display base song -->
 						<span class="text-md font-medium leading-none">Song - {songData.name}</span>
 						<div class="flex items-center space-x-2">
-							<AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer />
+							<div class="w-full">
+								<AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer />
+							</div>
 							<Button on:click={() => (baseSong = '')}>Change</Button>
 						</div>
 						<form
 							method="post"
 							action="?/analyzeSong"
+							class="hidden"
 							use:enhance={() => {
 								return async ({ update, result }) => {
-									update();
 									handleSongSegments(result);
-									handleForm(result);
 								};
 							}}
 						>
 							<input type="hidden" name="songId" value={baseSong} />
 							<button type="submit" class="hidden" bind:this={analyzeFormButton}>Analyze</button>
 						</form>
-						{#if analyzingSong}
-							<div class="flex items-center justify-center relative space-x-2 h-32 overflow-hidden">
-								<LottiePlayer
-									src={'/audio_wave_loader.json'}
-									autoplay={true}
-									loop={true}
-									controls={false}
-									background="transparent"
-									renderer="svg"
-								/>
-								<span
-									class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lg text-secondary-foreground"
-								>
-									Analyzing song...
-								</span>
-							</div>
-						{/if}
+						<form
+							method="post"
+							action="?/getNextBestSongs"
+							class="hidden"
+							use:enhance={() => {
+								return async ({ update, result }) => {
+									handleSongRecommendation(result);
+								};
+							}}
+						>
+							<input name="songId" class="hidden" value={baseSong} />
+							<input name="currentSegmentEnd" class="hidden" value={currentSegmentEnd} />
+							<button type="submit" class="hidden" bind:this={fetchRecommendationsButton}>
+								Fetch Recommendations
+							</button>
+						</form>
+						<div class="relative flex flex-col">
+							{#if analyzingSong || fetchingRecommendations}
+								<div class="w-full absolute h-full flex backdrop-blur-sm">
+									<div class="flex items-center justify-center space-x-2 h-48 overflow-hidden">
+										<LottiePlayer
+											src={'/audio_wave_loader.json'}
+											autoplay={true}
+											loop={true}
+											controls={false}
+											background="transparent"
+											renderer="svg"
+										/>
+										<span
+											class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lg text-secondary-foreground"
+										>
+											{analyzingSong ? 'Analyzing song...' : 'Fetching recommendations...'}
+										</span>
+									</div>
+								</div>
+							{/if}
+							<ul role="list" class="space-y-1">
+								{#each nextBestSongs as song, index}
+									<li class="overflow-hidden rounded-md bg-white px-6 py-3 shadow">
+										<div class="min-w-0 flex-auto">
+											<div class="flex items-center gap-x-3">
+												<div class="flex-none rounded-full p-1 text-rose-400 bg-rose-400/10">
+													<div class="h-2 w-2 rounded-full bg-current"></div>
+												</div>
+												<h2 class="min-w-0 text-sm font-semibold leading-6 text-black">
+													<span class="truncate">{index + 1}. {song.name}</span>
+												</h2>
+											</div>
+											<div class="mt-1 flex items-center gap-x-2.5 text-xs leading-5 text-gray-700">
+												<p class="truncate">Artist</p>
+												<svg viewBox="0 0 2 2" class="h-0.5 w-0.5 flex-none fill-gray-300">
+													<circle cx="1" cy="1" r="1" />
+												</svg>
+												<p class="whitespace-nowrap">
+													<!-- trim everythig after the word seconds -->
+													Starting from {song.start_timestamp.split('seconds')[0]} seconds
+												</p>
+											</div>
+										</div>
+									</li>
+								{/each}
+							</ul>
+						</div>
 					{/if}
 				</div>
 			</div>

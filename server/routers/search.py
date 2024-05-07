@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, status
+from fastapi.responses import JSONResponse
 import numpy as np
 from pydantic import BaseModel
 
@@ -78,16 +79,20 @@ async def search(request: SearchRequest):
     current_song_id = request.current_song_id
     current_segment_end = request.current_segment_end
     current_segment_end_milliseconds = current_segment_end * 1000
-    print(f"Current Song ID: {current_song_id}, Current Segment End: {current_segment_end_milliseconds}")
+    # print(f"Current Song ID: {current_song_id}, Current Segment End: {current_segment_end_milliseconds}")
     best_next_songs = find_next_song(current_song_id, current_segment_end_milliseconds)
     response = []
     for song_id, song_name, start_timestamp in best_next_songs:
         readable_seconds = milliseconds_to_readable(start_timestamp)
-        print(f"Id: {song_id}, Name: {song_name}, Start Timestamp: {readable_seconds}")
+        # print(f"Id: {song_id}, Name: {song_name}, Start Timestamp: {readable_seconds}")
         response.append({
             "id": song_id,
             "name": song_name,
             "start_timestamp": readable_seconds,
             "start_milliseconds": start_timestamp
         })
-    return response
+    return JSONResponse({
+        "status": status.HTTP_200_OK,
+        "message": "Best next songs found.",
+        "data": response
+    })

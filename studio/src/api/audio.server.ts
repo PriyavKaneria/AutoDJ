@@ -1,5 +1,5 @@
 import { BACKEND_URL } from '$env/static/private';
-import type { AudioFeatures, LibrarySong } from '$lib/types';
+import type { AudioFeatures, LibrarySong, RecommendedSong } from '$lib/types';
 // import { handleFetchError } from '$lib/utils';
 
 const makeUrl = (path: string): string => `${BACKEND_URL}${path}`;
@@ -31,4 +31,20 @@ export async function fetchSongAudioFeatures(songId: string): Promise<AudioFeatu
 	}).then((res) => res.json());
 	// .catch((err) => handleFetchError(err, 'Error fetching song audio features'));
 	return res.data;
+}
+
+export async function fetchNextBestSongs(
+	songId: string,
+	currentSegmentEnd: number
+): Promise<RecommendedSong[]> {
+	const url = makeUrl(`/search`);
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ current_song_id: songId, current_segment_end: currentSegmentEnd })
+	}).then((res) => res.json());
+	// .catch((err) => handleFetchError(err, 'Error fetching next best songs'));
+	return res.data as RecommendedSong[];
 }

@@ -1,0 +1,142 @@
+<html>
+	<style>
+		.bracket-container {
+			margin-top: 15vh;
+			width: 100%;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			flex-direction: column;
+		}
+
+		.bracket {
+			position: relative;
+			width: 800px;
+			height: 50px;
+			border-top: 3px solid black;
+			border-left: 3px solid black;
+			border-right: 3px solid black;
+		}
+
+		.bracket::before {
+			content: "";
+			position: absolute;
+			top: -3px;
+			left: -13px;
+			width: 10px;
+			height: 10px;
+			background-image: radial-gradient(
+				circle at 100% 0,
+				transparent 0%,
+				transparent 10px,
+				black 10px
+			);
+			transform: rotate(180deg);
+		}
+
+		.bracket::after {
+			content: "";
+			position: absolute;
+			top: -3px;
+			right: -13px;
+			width: 10px;
+			height: 10px;
+			background-image: radial-gradient(
+				circle at 0% 0,
+				transparent 0%,
+				transparent 10px,
+				black 10px
+			);
+			transform: rotate(180deg);
+		}
+
+		.border-tip-left {
+			position: absolute;
+			left: -0.5;
+			width: 0;
+			bottom: 0;
+			height: 0;
+			border-left: 4px solid transparent;
+			border-bottom: 50px solid white;
+			transform: translateX(-50%);
+		}
+
+		.border-tip-right {
+			position: absolute;
+			right: -5.5;
+			width: 0;
+			bottom: 0;
+			height: 0;
+			border-right: 4px solid transparent;
+			border-bottom: 50px solid white;
+			transform: translateX(-50%);
+		}
+
+		.extruding-line {
+			position: absolute;
+			top: -20px;
+			left: 50%;
+			width: 0;
+			height: 0;
+			border-left: 20px solid transparent;
+			border-right: 20px solid transparent;
+			border-bottom: 20px solid black;
+			border-radius: 20%;
+			transform: translateX(-50%);
+		}
+
+		.extruding-line::before {
+			content: "";
+			position: absolute;
+			top: -20px;
+			left: 50%;
+			width: 0;
+			height: 0;
+			border-left: 10px solid transparent;
+			border-right: 10px solid transparent;
+			border-bottom: 40px solid black;
+			transform: translateX(-50%);
+		}
+
+		.extruding-line::after {
+			content: "";
+			position: absolute;
+			top: -10px;
+			left: 50%;
+			width: 0;
+			height: 0;
+			border-left: 5px solid transparent;
+			border-right: 5px solid transparent;
+			border-bottom: 30px solid white;
+			transform: translateX(-50%);
+		}
+
+		#range-input {
+			margin-right: auto;
+			margin-left: auto;
+			width: 800px;
+			margin-top: 60px;
+		}
+	</style>
+
+	<div class="bracket-container">
+		<div class="bracket" id="bracket">
+			<div class="extruding-line"></div>
+			<div class="border-tip-left"></div>
+			<div class="border-tip-right"></div>
+		</div>
+		<input type="range" min="0" max="100" value="50" id="range-input" />
+	</div>
+
+	<script>
+		const rangeInput = document.getElementById("range-input")
+		const extrudingLine = document.querySelector(".extruding-line")
+		const bracketWidth = document.querySelector("#bracket").offsetWidth
+
+		rangeInput.addEventListener("input", () => {
+			const value = rangeInput.value
+			const translateX = (value / 100) * (bracketWidth - 40) - bracketWidth / 2
+			extrudingLine.style.transform = `translateX(${translateX}px)`
+		})
+	</script>
+</html>
