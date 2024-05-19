@@ -16,8 +16,8 @@ export async function fetchSongLibrary(): Promise<LibrarySong[]> {
 	return res.data as LibrarySong[];
 }
 
-export async function fetchSongURL(songId: string): Promise<string> {
-	const url = makeUrl(`/stream/${songId}`);
+export async function fetchSongURL(songId: string, startFrom: number): Promise<string> {
+	const url = makeUrl(`/stream/${songId}?start_from=${startFrom}`);
 	return url;
 }
 

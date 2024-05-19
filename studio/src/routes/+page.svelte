@@ -16,12 +16,13 @@
 	$: selectedSong = '';
 
 	$: songData = (data.songLibrary.find((song) => song.id === baseSong) || {}) as LibrarySong;
+	$: nextSongData = (data.songLibrary.find((song) => song.id === nextSongURL) || {}) as LibrarySong;
 	$: formLoading = false;
 
 	$: songURL = '';
 	$: analyzingSong = false;
 
-	const handleForm = (result: ActionResult) => {
+	const handleSongURL = (result: ActionResult) => {
 		if (result.type === 'success' && result.data) {
 			if (result.data.songURL) {
 				songURL = result.data.songURL;
@@ -38,6 +39,7 @@
 
 	$: audioFeatures = {} as AudioFeatures;
 	let wavesurfer: WaveSurfer;
+	let nextWaveSurfer: WaveSurfer;
 	let wsRegions: RegionsPlugin;
 
 	const handleSongSegments = (result: ActionResult) => {
@@ -102,6 +104,17 @@
 		}
 	};
 
+	$: nextSongURL = '';
+
+	const handleNextSong = (result: ActionResult) => {
+		if (result.type === 'success' && result.data) {
+			if (result.data.songURL) {
+				console.log(result.data.songURL);
+				nextSongURL = result.data.songURL;
+			}
+		}
+	};
+
 	export let data: PageData;
 </script>
 
@@ -128,6 +141,9 @@
 					>
 						Audio settings
 					</span>
+					{#if baseSong != ''}
+						<Button class="w-full" on:click={() => (baseSong = '')}>Change base song</Button>
+					{/if}
 					<span class="text-xs text-muted-foreground">Coming soon</span>
 				</div>
 			</div>
@@ -149,8 +165,8 @@
 									use:enhance={() => {
 										formLoading = true;
 										return async ({ update, result }) => {
-											update();
-											handleForm(result);
+											// update();
+											handleSongURL(result);
 											baseSong = selectedSong;
 											formLoading = false;
 										};
@@ -165,11 +181,20 @@
 					{#if baseSong != '' && !formLoading}
 						<!-- Display base song -->
 						<span class="text-md font-medium leading-none">Song - {songData.name}</span>
-						<div class="flex items-center space-x-2">
+						<div class="flex flex-col items-center space-y-2">
 							<div class="w-full">
 								<AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer />
 							</div>
-							<Button on:click={() => (baseSong = '')}>Change</Button>
+							{#if nextSongURL != ''}
+								<div class="w-full">
+									<AudioTrack
+										songData={nextSongData}
+										songURL={nextSongURL}
+										analyzeSong={() => {}}
+										bind:wavesurfer={nextWaveSurfer}
+									/>
+								</div>
+							{/if}
 						</div>
 						<form
 							method="post"
@@ -222,27 +247,49 @@
 							{/if}
 							<ul role="list" class="space-y-1">
 								{#each nextBestSongs as song, index}
-									<li class="overflow-hidden rounded-md bg-white px-6 py-3 shadow">
-										<div class="min-w-0 flex-auto">
-											<div class="flex items-center gap-x-3">
-												<div class="flex-none rounded-full p-1 text-rose-400 bg-rose-400/10">
-													<div class="h-2 w-2 rounded-full bg-current"></div>
+									<li class="overflow-hidden rounded-md bg-white px-6 py-3 shadow cursor-pointer">
+										<form
+											method="post"
+											action="?/getSongURL"
+											use:enhance={() => {
+												nextSongURL = '';
+												return async ({ update, result }) => {
+													handleNextSong(result);
+												};
+											}}
+										>
+											<button type="submit">
+												<div class="min-w-0 flex-auto">
+													<div class="flex items-center gap-x-3">
+														<div class="flex-none rounded-full p-1 text-rose-400 bg-rose-400/10">
+															<div class="h-2 w-2 rounded-full bg-current"></div>
+														</div>
+														<h2 class="min-w-0 text-sm font-semibold leading-6 text-black">
+															<span class="truncate">{index + 1}. {song.name}</span>
+															<input class="hidden" type="text" name="songId" value={song.id} />
+														</h2>
+													</div>
+													<div
+														class="mt-1 flex items-center gap-x-2.5 text-xs leading-5 text-gray-700"
+													>
+														<p class="truncate">Artist</p>
+														<svg viewBox="0 0 2 2" class="h-0.5 w-0.5 flex-none fill-gray-300">
+															<circle cx="1" cy="1" r="1" />
+														</svg>
+														<p class="whitespace-nowrap">
+															<!-- trim everythig after the word seconds -->
+															Starting from {song.start_timestamp.split('seconds')[0]} seconds
+															<input
+																class="hidden"
+																type="text"
+																name="startFrom"
+																value={song.start_milliseconds}
+															/>
+														</p>
+													</div>
 												</div>
-												<h2 class="min-w-0 text-sm font-semibold leading-6 text-black">
-													<span class="truncate">{index + 1}. {song.name}</span>
-												</h2>
-											</div>
-											<div class="mt-1 flex items-center gap-x-2.5 text-xs leading-5 text-gray-700">
-												<p class="truncate">Artist</p>
-												<svg viewBox="0 0 2 2" class="h-0.5 w-0.5 flex-none fill-gray-300">
-													<circle cx="1" cy="1" r="1" />
-												</svg>
-												<p class="whitespace-nowrap">
-													<!-- trim everythig after the word seconds -->
-													Starting from {song.start_timestamp.split('seconds')[0]} seconds
-												</p>
-											</div>
-										</div>
+											</button>
+										</form>
 									</li>
 								{/each}
 							</ul>

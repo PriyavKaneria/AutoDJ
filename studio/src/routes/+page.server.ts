@@ -16,13 +16,14 @@ export const actions: import('./$types').Actions = {
 	getSongURL: async ({ request }) => {
 		const form = await request.formData();
 		const songId = (form.get('songId') as string) || '';
+		const startFrom = Math.floor(Number(form.get('startFrom'))) || 0;
 		if (songId === '') {
 			return {
 				songURL: ''
 			};
 		}
 		return {
-			songURL: await fetchSongURL(songId)
+			songURL: await fetchSongURL(songId, startFrom)
 		};
 	},
 
