@@ -30,3 +30,11 @@ audio_features
     - frequency : float
     - key : str
 ```
+
+## AutoDJ Features -
+- [ ] Load mp3 audio file
+- [ ] Direct load from youtube
+- [ ] Extract audio features on server
+- [x] Show segmentations
+- [x] Show song recommendations
+- [ ] Mix songs
