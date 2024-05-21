@@ -11,6 +11,7 @@
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
 	import WaveSurfer from 'wavesurfer.js';
 	import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
+	import DynamicBracket from '$lib/components/DynamicBracket.svelte';
 
 	let baseSong = '';
 	$: selectedSong = '';
@@ -63,6 +64,8 @@
 		fetchingRecommendations = true;
 	}
 
+	$: segmentProgress = (currentSegmentEnd / (wavesurfer ? wavesurfer.getDuration() : 1)) * 100;
+
 	const loadSegmentMarkers = () => {
 		if (!analyzingSong && audioFeatures) {
 			wsRegions = wavesurfer.registerPlugin(RegionsPlugin.create());
@@ -83,8 +86,8 @@
 			wavesurfer.on('timeupdate', () => {
 				const currentTime = wavesurfer.getCurrentTime();
 				const currentSegment =
-					audioFeatures.segments_boundaries.findLast((boundary) => {
-						return currentTime >= boundary;
+					audioFeatures.segments_boundaries.find((boundary) => {
+						return currentTime < boundary;
 					}) || 0;
 				if (currentSegmentEnd !== currentSegment) {
 					currentSegmentEnd = currentSegment;
@@ -243,6 +246,11 @@
 											{analyzingSong ? 'Analyzing song...' : 'Fetching recommendations...'}
 										</span>
 									</div>
+								</div>
+							{/if}
+							{#if nextBestSongs.length !== 0}
+								<div class="flex flex-col space-y-2">
+									<DynamicBracket progress={segmentProgress} />
 								</div>
 							{/if}
 							<ul role="list" class="space-y-1">

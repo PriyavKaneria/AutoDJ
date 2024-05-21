@@ -23,11 +23,13 @@ def stream_audio(audio_id: str):
                 # bytes_to_skip = int((start_from / 1000) * sample_rate * channels * sample_width)
                 # print(f"Skipping {bytes_to_skip} bytes out of {os.path.getsize(audio_file)} bytes")
                 # aacfile.read(bytes_to_skip)
-                # data = aacfile.read(1024)
+
+                data = aacfile.read(1024)
                 while data:
                     yield data
                     data = aacfile.read(1024)
                     await asyncio.sleep(0)
+                    
         except asyncio.CancelledError:
             raise GeneratorExit
 

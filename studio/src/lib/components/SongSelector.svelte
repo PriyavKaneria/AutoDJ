@@ -14,7 +14,11 @@
 
 	let value = '';
 
-	$: selectedValueName = songLibrary.find((f) => f.id === value)?.name ?? '';
+	const library = songLibrary.reduce((acc: any, song) => {
+		acc[song.id.toLowerCase()] = song.name;
+		return acc;
+	}, {});
+	$: selectedValueName = library[value.toLowerCase()] ?? '';
 	$: selectedValue = value;
 
 	// We want to refocus the trigger button when the user selects
@@ -44,7 +48,12 @@
 		</Button>
 	</Popover.Trigger>
 	<Popover.Content class="w-full p-0 md:w-[200px] lg:w-[300px]">
-		<Command.Root>
+		<Command.Root
+			filter={(value, search) => {
+				if (String(library[value.toLowerCase()]).toLowerCase().includes(search)) return 1;
+				return 0;
+			}}
+		>
 			<Command.Input placeholder="Search songs..." />
 			<Command.List>
 				<Command.Empty>No songs found.</Command.Empty>
