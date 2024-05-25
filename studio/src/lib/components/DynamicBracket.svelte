@@ -7,7 +7,6 @@
 	$: progress,
 		(function () {
 			const valueNumber = Number(progress);
-			console.log(progress);
 			const translateX = (valueNumber / 100) * (bracketWidth - 0) - (bracketWidth + 40) / 2;
 			if (extrudingLine) {
 				extrudingLine.style.transform = `translateX(${translateX}px)`;
@@ -70,9 +69,9 @@
 
 	.border-tip-left {
 		position: absolute;
-		left: -0.5;
+		left: -2px;
 		width: 0;
-		bottom: 0;
+		top: 0;
 		height: 0;
 		border-left: 4px solid transparent;
 		border-bottom: 50px solid white;
@@ -81,9 +80,9 @@
 
 	.border-tip-right {
 		position: absolute;
-		right: -5.5;
+		right: -5.5px;
 		width: 0;
-		bottom: 0;
+		top: 0;
 		height: 0;
 		border-right: 4px solid transparent;
 		border-bottom: 50px solid white;
