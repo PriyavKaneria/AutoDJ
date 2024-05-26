@@ -6,12 +6,14 @@
 	import type { PageData } from './$types';
 	import type { LibrarySong, AudioFeatures, RecommendedSong } from '$lib/types';
 	import AudioTrack from '$lib/components/AudioTrack.svelte';
+	import MultiAudioTrack from '$lib/components/MultiAudioTrack.svelte';
+	import DynamicBracket from '$lib/components/DynamicBracket.svelte';
 	import { enhance } from '$app/forms';
 	import { type ActionResult } from '@sveltejs/kit';
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
 	import WaveSurfer from 'wavesurfer.js';
 	import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
-	import DynamicBracket from '$lib/components/DynamicBracket.svelte';
+	import type MultiTrack from 'wavesurfer-multitrack';
 
 	let baseSong = '';
 	$: selectedSong = '';
@@ -39,8 +41,9 @@
 	};
 
 	$: audioFeatures = {} as AudioFeatures;
-	let wavesurfer: WaveSurfer;
-	let nextWaveSurfer: WaveSurfer;
+	// let wavesurfer: WaveSurfer;
+	// let nextWaveSurfer: WaveSurfer;
+	let multitrack: MultiTrack;
 	let wsRegions: RegionsPlugin;
 
 	const handleSongSegments = (result: ActionResult) => {
@@ -49,7 +52,7 @@
 				// setTimeout(() => {
 				analyzingSong = false;
 				audioFeatures = result?.data?.audioFeatures;
-				loadSegmentMarkers();
+				// loadSegmentMarkers();
 				// }, 2000);
 			}
 		}
@@ -64,37 +67,37 @@
 		fetchingRecommendations = true;
 	}
 
-	$: segmentProgress = (currentSegmentEnd / (wavesurfer ? wavesurfer.getDuration() : 1)) * 100;
+	// $: segmentProgress = (currentSegmentEnd / (wavesurfer ? wavesurfer.getDuration() : 1)) * 100;
 
-	const loadSegmentMarkers = () => {
-		if (!analyzingSong && audioFeatures) {
-			wsRegions = wavesurfer.registerPlugin(RegionsPlugin.create());
-			audioFeatures.segments_boundaries.forEach((boundary) => {
-				wsRegions.addRegion({
-					start: boundary,
-					color: 'black',
-					drag: false,
-					resize: false
-				});
-			});
-			wsRegions.on('region-clicked', (region, e) => {
-				e.stopPropagation();
-				// region.play();
-				wavesurfer.setTime(region.start);
-				currentSegmentEnd = region.start;
-			});
-			wavesurfer.on('timeupdate', () => {
-				const currentTime = wavesurfer.getCurrentTime();
-				const currentSegment =
-					audioFeatures.segments_boundaries.find((boundary) => {
-						return currentTime < boundary;
-					}) || 0;
-				if (currentSegmentEnd !== currentSegment) {
-					currentSegmentEnd = currentSegment;
-				}
-			});
-		}
-	};
+	// const loadSegmentMarkers = () => {
+	// 	if (!analyzingSong && audioFeatures) {
+	// 		wsRegions = wavesurfer.registerPlugin(RegionsPlugin.create());
+	// 		audioFeatures.segments_boundaries.forEach((boundary) => {
+	// 			wsRegions.addRegion({
+	// 				start: boundary,
+	// 				color: 'black',
+	// 				drag: false,
+	// 				resize: false
+	// 			});
+	// 		});
+	// 		wsRegions.on('region-clicked', (region, e) => {
+	// 			e.stopPropagation();
+	// 			// region.play();
+	// 			wavesurfer.setTime(region.start);
+	// 			currentSegmentEnd = region.start;
+	// 		});
+	// 		wavesurfer.on('timeupdate', () => {
+	// 			const currentTime = wavesurfer.getCurrentTime();
+	// 			const currentSegment =
+	// 				audioFeatures.segments_boundaries.find((boundary) => {
+	// 					return currentTime < boundary;
+	// 				}) || 0;
+	// 			if (currentSegmentEnd !== currentSegment) {
+	// 				currentSegmentEnd = currentSegment;
+	// 			}
+	// 		});
+	// 	}
+	// };
 
 	let nextBestSongs: RecommendedSong[] = [];
 
@@ -125,7 +128,7 @@
 	<div
 		class="container flex flex-col items-start justify-between space-y-2 py-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16"
 	>
-		<h2 class="text-lg font-semibold text-nowrap">AI DJ</h2>
+		<h2 class="text-lg font-semibold text-nowrap">AutoDJ</h2>
 		<div class="ml-auto flex w-full space-x-2 sm:justify-end">
 			<Save />
 			<div class="hidden space-x-2 md:flex">
@@ -186,9 +189,10 @@
 						<span class="text-md font-medium leading-none">Song - {songData.name}</span>
 						<div class="flex flex-col items-center space-y-2">
 							<div class="w-full">
-								<AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer />
+								<!-- <AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer /> -->
+								<MultiAudioTrack {songData} {songURL} {analyzeSong} bind:multitrack />
 							</div>
-							{#if nextSongURL != ''}
+							<!-- {#if nextSongURL != ''}
 								<div class="w-full">
 									<AudioTrack
 										songData={nextSongData}
@@ -197,7 +201,7 @@
 										bind:wavesurfer={nextWaveSurfer}
 									/>
 								</div>
-							{/if}
+							{/if} -->
 						</div>
 						<form
 							method="post"
@@ -250,7 +254,7 @@
 							{/if}
 							{#if nextBestSongs.length !== 0}
 								<div class="flex flex-col space-y-2">
-									<DynamicBracket progress={segmentProgress} />
+									<!-- <DynamicBracket progress={segmentProgress} /> -->
 								</div>
 							{/if}
 							<ul role="list" class="space-y-1">
