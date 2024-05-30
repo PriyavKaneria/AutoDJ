@@ -1,0 +1,13 @@
+diff --git a/node_modules/wavesurfer-multitrack/dist/multitrack.d.ts b/node_modules/wavesurfer-multitrack/dist/multitrack.d.ts
+index 481838e..8103b6c 100644
+--- a/node_modules/wavesurfer-multitrack/dist/multitrack.d.ts
++++ b/node_modules/wavesurfer-multitrack/dist/multitrack.d.ts
+@@ -89,7 +89,7 @@ declare class MultiTrack extends EventEmitter<MultitrackEvents> {
+     private tracks;
+     private options;
+     private audios;
+-    private wavesurfers;
++    public wavesurfers;
+     private envelopes;
+     private durations;
+     private currentTime;
