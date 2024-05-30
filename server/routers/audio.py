@@ -33,4 +33,4 @@ def stream_audio(audio_id: str):
         except asyncio.CancelledError:
             raise GeneratorExit
 
-    return StreamingResponse(iterfile(), media_type="audio/mpeg")
+    return StreamingResponse(iterfile(), media_type="audio/aac")

@@ -4,8 +4,11 @@
 	import type { LibrarySong } from '$lib/types/LibrarySong';
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
 	import Hover from 'wavesurfer.js/dist/plugins/hover.js';
+	import TimelinePlugin from 'wavesurfer.js/plugins/timeline';
+	import ZoomPlugin from 'wavesurfer.js/plugins/zoom';
 	import MultiTrack from 'wavesurfer-multitrack';
 	import { Pause, Play, StepBack, StepForward } from 'lucide-svelte';
+	import Button from './ui/button/button.svelte';
 
 	export let songData: LibrarySong = {
 		id: '',
@@ -24,27 +27,67 @@
 	$: loadedSong = false;
 
 	$: isPlaying = multitrack && multitrack.isPlaying();
-	// $: currentTime = multitrack && multitrack.getCurrentTime();
+	$: currentTime = multitrack && multitrack.getCurrentTime();
 	let currentTimeSpan: HTMLSpanElement;
+
+	let audioElement: HTMLAudioElement;
 
 	const loadSong = async () => {
 		const src = songURL;
 		const blob = await fetch(src).then((resp) => resp.blob());
 		const blobURL = URL.createObjectURL(blob);
+		const elem = new Audio(blobURL);
+		elem.preload = 'metadata';
+		audioElement = elem;
+		elem.addEventListener('loadeddata', function () {
+			console.log('Audio data loaded');
+			console.log('Audio duration: ' + this.duration);
+			// audioElement = elem;
+		});
+
 		multitrack.addTrack({
 			id: 0,
 			startPosition: 0,
 			draggable: false,
 			options: {
-				media: new Audio(blobURL),
+				media: audioElement,
+				backend: 'MediaElement',
 				waveColor: '#ed738e',
 				progressColor: '#e11d48',
+				barWidth: 3,
+				barGap: 3,
+				barRadius: 3,
+				barHeight: 0.8,
 				dragToSeek: true,
-				plugins: []
+				splitChannels: [
+					{
+						height: 100
+					},
+					{
+						height: 0
+					}
+				],
+				plugins: [
+					Hover.create({
+						labelSize: 16,
+						lineColor: 'black',
+						lineWidth: 1
+					}),
+					ZoomPlugin.create({
+						deltaThreshold: 0,
+						maxZoom: 100
+					}),
+					TimelinePlugin.create({
+						primaryLabelInterval: 30,
+						secondaryLabelInterval: 5
+					})
+				]
 			}
 		});
+
 		loadingSong = false;
 		loadedSong = true;
+		analyzeSong();
 	};
 
 	// $: () => {
@@ -57,6 +100,36 @@
 	// 	}
 	// };
 
+	// const loadSegmentMarkers = () => {
+	// 	if (!analyzingSong && audioFeatures) {
+	// 		wsRegions = wavesurfer.registerPlugin(RegionsPlugin.create());
+	// 		audioFeatures.segments_boundaries.forEach((boundary) => {
+	// 			wsRegions.addRegion({
+	// 				start: boundary,
+	// 				color: 'black',
+	// 				drag: false,
+	// 				resize: false
+	// 			});
+	// 		});
+	// 		wsRegions.on('region-clicked', (region, e) => {
+	// 			e.stopPropagation();
+	// 			// region.play();
+	// 			wavesurfer.setTime(region.start);
+	// 			currentSegmentEnd = region.start;
+	// 		});
+	// 		wavesurfer.on('timeupdate', () => {
+	// 			const currentTime = wavesurfer.getCurrentTime();
+	// 			const currentSegment =
+	// 				audioFeatures.segments_boundaries.find((boundary) => {
+	// 					return currentTime < boundary;
+	// 				}) || 0;
+	// 			if (currentSegmentEnd !== currentSegment) {
+	// 				currentSegmentEnd = currentSegment;
+	// 			}
+	// 		});
+	// 	}
+	// };
+
 	onMount(() => {
 		multitrack = MultiTrack.create(
 			[
@@ -65,27 +138,21 @@
 					startPosition: 0
 				}
 				// {
-				// 	id: 'base',
-				// 	startPosition: 1,
-				// 	draggable: false,
-				// 	url: songURL,
-				// 	options: {
-				// 		waveColor: '#ed738e',
-				// 		progressColor: '#e11d48',
-				// 		dragToSeek: true,
-				// 		plugins: [
-				// 			// Hover.create({
-				// 			// 	labelSize: 16
-				// 			// })
-				// 		]
-				// 	}
-				// }
+				// 	id: 1,
+				// 	startPosition: 0,
+				// },
 			],
 			{
 				container: waveformContainer,
 				cursorColor: '#000',
+				cursorWidth: 1,
+				rightButtonDrag: true,
 				trackBackground: '#fff',
-				trackBorderColor: '#000'
+				trackBorderColor: '#000',
+				minPxPerSec: 10,
+				timelineOptions: {
+					duration: 100
+				}
 			}
 		);
 
@@ -95,29 +162,12 @@
 			console.log('Set sinkId to default');
 			// load the song
 			await loadSong();
-			// loadingSong = false;
-			// loadedSong = true;
-			// analyzeSong();
 		});
 
-		// multitrack.on('drop', ({ id }) => {
-		// 	console.log('Dropped track', id);
-		// 	multitrack.addTrack({
-		// 		id,
-		// 		url: songURL,
-		// 		startPosition: 0,
-		// 		draggable: true,
-		// 		options: {
-		// 			waveColor: 'hsl(25, 87%, 49%)',
-		// 			progressColor: 'hsl(25, 87%, 20%)'
-		// 		}
-		// 	});
-		// });
-
-		// wavesurfer.on('timeupdate', () => {
+		// multitrack.on('', () => {
 		// 	const cursorTime = document.getElementById('cursor-time');
 		// 	if (cursorTime) {
-		// 		let timeInSeconds = wavesurfer.getCurrentTime();
+		// 		let timeInSeconds = multitrack.getCurrentTime();
 		// 		currentTime = timeInSeconds;
 		// 		const minutes = Math.floor(timeInSeconds / 60);
 		// 		const seconds = Math.floor(timeInSeconds % 60);
@@ -145,7 +195,6 @@
 </script>
 
 <div class="flex flex-col items-start w-full mb-4 gap-3 relative">
-	<span class="text-sm text-gray-400">Youtube link : {songData.url}</span>
 	{#if loadingSong}
 		<div class="flex-grow h-32 flex overflow-hidden items-center border border-dashed border-muted">
 			<LottiePlayer
@@ -190,38 +239,16 @@
 			</button>
 		</div>
 	</div>
+	<div id="timeline" class="w-full" />
 	<div
-		class="flex-grow w-full bg-muted border border-dashed border-muted-foreground"
+		class="flex-grow w-full bg-muted border border-dashed border-muted-foreground track"
 		bind:this={waveformContainer}
 	/>
-	<!-- <div class="absolute bottom-0 left-0 flex items-center gap-1 z-10">
-		<span class="text-xs text-white bg-black p-1 rounded-tr-lg" id="cursor-time">00:00</span>
-	</div> -->
-	<!-- Skip back 5 - Play/Pause - Skip next 5 controls -->
-	<!-- <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full">
-		<div class="flex items-center bg-black text-white rounded-b-lg">
-			<button
-				class="flex items-center justify-center w-6 h-6 rounded-full p-1.5"
-				on:click={() => wavesurfer.seekTo(wavesurfer.getCurrentTime() - 5)}
-			>
-				<StepBack class="w-6 h-6 text-white fill-white" />
-			</button>
-			<button
-				class="flex items-center justify-center w-6 h-6 rounded-full p-1.5"
-				on:click={() => wavesurfer.playPause()}
-			>
-				{#if isPlaying}
-					<Pause class="w-6 h-6 text-white fill-white" />
-				{:else}
-					<Play class="w-6 h-6 text-white fill-white" />
-				{/if}
-			</button>
-			<button
-				class="flex items-center justify-center w-6 h-6 rounded-full p-1.5"
-				on:click={() => wavesurfer.seekTo(wavesurfer.getCurrentTime() + 5)}
-			>
-				<StepForward class="w-6 h-6 text-white fill-white" />
-			</button>
-		</div>
-	</div> -->
 </div>
+
+<style lang="postcss">
+	.track {
+		/* scrollbar-width: none; */
+		scroll-behavior: auto;
+	}
+</style>

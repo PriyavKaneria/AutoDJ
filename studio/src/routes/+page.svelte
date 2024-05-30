@@ -69,36 +69,6 @@
 
 	// $: segmentProgress = (currentSegmentEnd / (wavesurfer ? wavesurfer.getDuration() : 1)) * 100;
 
-	// const loadSegmentMarkers = () => {
-	// 	if (!analyzingSong && audioFeatures) {
-	// 		wsRegions = wavesurfer.registerPlugin(RegionsPlugin.create());
-	// 		audioFeatures.segments_boundaries.forEach((boundary) => {
-	// 			wsRegions.addRegion({
-	// 				start: boundary,
-	// 				color: 'black',
-	// 				drag: false,
-	// 				resize: false
-	// 			});
-	// 		});
-	// 		wsRegions.on('region-clicked', (region, e) => {
-	// 			e.stopPropagation();
-	// 			// region.play();
-	// 			wavesurfer.setTime(region.start);
-	// 			currentSegmentEnd = region.start;
-	// 		});
-	// 		wavesurfer.on('timeupdate', () => {
-	// 			const currentTime = wavesurfer.getCurrentTime();
-	// 			const currentSegment =
-	// 				audioFeatures.segments_boundaries.find((boundary) => {
-	// 					return currentTime < boundary;
-	// 				}) || 0;
-	// 			if (currentSegmentEnd !== currentSegment) {
-	// 				currentSegmentEnd = currentSegment;
-	// 			}
-	// 		});
-	// 	}
-	// };
-
 	let nextBestSongs: RecommendedSong[] = [];
 
 	const handleSongRecommendation = (result: ActionResult) => {
@@ -139,60 +109,61 @@
 	</div>
 	<Separator />
 	<div class="container h-full py-6">
-		<div class="grid h-full items-stretch gap-6 md:grid-cols-[1fr_200px]">
-			<div class="hidden flex-col space-y-4 sm:flex md:order-2">
+		<!-- <div class="hidden flex-col space-y-4 sm:flex md:order-2">
 				<div class="grid gap-2">
 					<span
 						class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 					>
 						Audio settings
 					</span>
-					{#if baseSong != ''}
-						<Button class="w-full" on:click={() => (baseSong = '')}>Change base song</Button>
-					{/if}
+
 					<span class="text-xs text-muted-foreground">Coming soon</span>
 				</div>
-			</div>
-			<div class="md:order-1">
-				<div class="flex h-full flex-col space-y-4">
-					{#if baseSong == ''}
-						<!-- Search song from library -->
-						<span class="text-sm font-medium leading-none">
-							Select a base song from the library
-						</span>
-						{#if data.songLibrary.length === 0}
-							<span class="text-xs text-muted-foreground">No songs found.</span>
-						{:else}
-							<div class="flex items-center space-x-2">
-								<SongSelector songLibrary={data.songLibrary} bind:selectedValue={selectedSong} />
-								<form
-									method="post"
-									action="?/getSongURL"
-									use:enhance={() => {
-										formLoading = true;
-										return async ({ update, result }) => {
-											// update();
-											handleSongURL(result);
-											baseSong = selectedSong;
-											formLoading = false;
-										};
-									}}
-								>
-									<input type="hidden" name="songId" value={selectedSong} />
-									<Button type="submit">Load</Button>
-								</form>
-							</div>
-						{/if}
+			</div> -->
+		<div class="md:order-1">
+			<div class="flex h-full flex-col space-y-4">
+				{#if baseSong == ''}
+					<!-- Search song from library -->
+					<span class="text-sm font-medium leading-none">
+						Select a base song from the library
+					</span>
+					{#if data.songLibrary.length === 0}
+						<span class="text-xs text-muted-foreground">No songs found.</span>
+					{:else}
+						<div class="flex items-center space-x-2">
+							<SongSelector songLibrary={data.songLibrary} bind:selectedValue={selectedSong} />
+							<form
+								method="post"
+								action="?/getSongURL"
+								use:enhance={() => {
+									formLoading = true;
+									return async ({ update, result }) => {
+										// update();
+										handleSongURL(result);
+										baseSong = selectedSong;
+										formLoading = false;
+									};
+								}}
+							>
+								<input type="hidden" name="songId" value={selectedSong} />
+								<Button type="submit">Load</Button>
+							</form>
+						</div>
 					{/if}
-					{#if baseSong != '' && !formLoading}
-						<!-- Display base song -->
-						<span class="text-md font-medium leading-none">Song - {songData.name}</span>
-						<div class="flex flex-col items-center space-y-2">
-							<div class="w-full">
-								<!-- <AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer /> -->
-								<MultiAudioTrack {songData} {songURL} {analyzeSong} bind:multitrack />
-							</div>
-							<!-- {#if nextSongURL != ''}
+				{/if}
+				{#if baseSong != '' && !formLoading}
+					<!-- Display base song -->
+					<span class="text-md font-medium leading-none">Song - {songData.name}</span>
+					<span class="text-sm text-gray-400">Youtube link : {songData.url}</span>
+					<div class="flex flex-col items-center space-y-2">
+						<div class="w-full">
+							{#if baseSong != ''}
+								<Button class="" on:click={() => (baseSong = '')}>Change base song</Button>
+							{/if}
+							<!-- <AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer /> -->
+							<MultiAudioTrack {songData} {songURL} {analyzeSong} bind:multitrack />
+						</div>
+						<!-- {#if nextSongURL != ''}
 								<div class="w-full">
 									<AudioTrack
 										songData={nextSongData}
@@ -202,112 +173,111 @@
 									/>
 								</div>
 							{/if} -->
-						</div>
-						<form
-							method="post"
-							action="?/analyzeSong"
-							class="hidden"
-							use:enhance={() => {
-								return async ({ update, result }) => {
-									handleSongSegments(result);
-								};
-							}}
-						>
-							<input type="hidden" name="songId" value={baseSong} />
-							<button type="submit" class="hidden" bind:this={analyzeFormButton}>Analyze</button>
-						</form>
-						<form
-							method="post"
-							action="?/getNextBestSongs"
-							class="hidden"
-							use:enhance={() => {
-								return async ({ update, result }) => {
-									handleSongRecommendation(result);
-								};
-							}}
-						>
-							<input name="songId" class="hidden" value={baseSong} />
-							<input name="currentSegmentEnd" class="hidden" value={currentSegmentEnd} />
-							<button type="submit" class="hidden" bind:this={fetchRecommendationsButton}>
-								Fetch Recommendations
-							</button>
-						</form>
-						<div class="relative flex flex-col">
-							{#if analyzingSong || fetchingRecommendations}
-								<div class="w-full absolute h-full flex backdrop-blur-sm">
-									<div class="flex items-center justify-center space-x-2 h-48 overflow-hidden">
-										<LottiePlayer
-											src={'/audio_wave_loader.json'}
-											autoplay={true}
-											loop={true}
-											controls={false}
-											background="transparent"
-											renderer="svg"
-										/>
-										<span
-											class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lg text-secondary-foreground"
-										>
-											{analyzingSong ? 'Analyzing song...' : 'Fetching recommendations...'}
-										</span>
-									</div>
+					</div>
+					<form
+						method="post"
+						action="?/analyzeSong"
+						class="hidden"
+						use:enhance={() => {
+							return async ({ update, result }) => {
+								handleSongSegments(result);
+							};
+						}}
+					>
+						<input type="hidden" name="songId" value={baseSong} />
+						<button type="submit" class="hidden" bind:this={analyzeFormButton}>Analyze</button>
+					</form>
+					<form
+						method="post"
+						action="?/getNextBestSongs"
+						class="hidden"
+						use:enhance={() => {
+							return async ({ update, result }) => {
+								handleSongRecommendation(result);
+							};
+						}}
+					>
+						<input name="songId" class="hidden" value={baseSong} />
+						<input name="currentSegmentEnd" class="hidden" value={currentSegmentEnd} />
+						<button type="submit" class="hidden" bind:this={fetchRecommendationsButton}>
+							Fetch Recommendations
+						</button>
+					</form>
+					<div class="relative flex flex-col">
+						{#if analyzingSong || fetchingRecommendations}
+							<div class="w-full absolute h-full flex backdrop-blur-sm">
+								<div class="flex items-center justify-center space-x-2 h-48 overflow-hidden">
+									<LottiePlayer
+										src={'/audio_wave_loader.json'}
+										autoplay={true}
+										loop={true}
+										controls={false}
+										background="transparent"
+										renderer="svg"
+									/>
+									<span
+										class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lg text-secondary-foreground"
+									>
+										{analyzingSong ? 'Analyzing song...' : 'Fetching recommendations...'}
+									</span>
 								</div>
-							{/if}
-							{#if nextBestSongs.length !== 0}
-								<div class="flex flex-col space-y-2">
-									<!-- <DynamicBracket progress={segmentProgress} /> -->
-								</div>
-							{/if}
-							<ul role="list" class="space-y-1">
-								{#each nextBestSongs as song, index}
-									<li class="overflow-hidden rounded-md bg-white px-6 py-3 shadow cursor-pointer">
-										<form
-											method="post"
-											action="?/getSongURL"
-											use:enhance={() => {
-												nextSongURL = '';
-												return async ({ update, result }) => {
-													handleNextSong(result);
-												};
-											}}
-										>
-											<button type="submit">
-												<div class="min-w-0 flex-auto">
-													<div class="flex items-center gap-x-3">
-														<div class="flex-none rounded-full p-1 text-rose-400 bg-rose-400/10">
-															<div class="h-2 w-2 rounded-full bg-current"></div>
-														</div>
-														<h2 class="min-w-0 text-sm font-semibold leading-6 text-black">
-															<span class="truncate">{index + 1}. {song.name}</span>
-															<input class="hidden" type="text" name="songId" value={song.id} />
-														</h2>
+							</div>
+						{/if}
+						{#if nextBestSongs.length !== 0}
+							<div class="flex flex-col space-y-2">
+								<!-- <DynamicBracket progress={segmentProgress} /> -->
+							</div>
+						{/if}
+						<ul role="list" class="space-y-1">
+							{#each nextBestSongs as song, index}
+								<li class="overflow-hidden rounded-md bg-white px-6 py-3 shadow cursor-pointer">
+									<form
+										method="post"
+										action="?/getSongURL"
+										use:enhance={() => {
+											nextSongURL = '';
+											return async ({ update, result }) => {
+												handleNextSong(result);
+											};
+										}}
+									>
+										<button type="submit">
+											<div class="min-w-0 flex-auto">
+												<div class="flex items-center gap-x-3">
+													<div class="flex-none rounded-full p-1 text-rose-400 bg-rose-400/10">
+														<div class="h-2 w-2 rounded-full bg-current"></div>
 													</div>
-													<div
-														class="mt-1 flex items-center gap-x-2.5 text-xs leading-5 text-gray-700"
-													>
-														<p class="truncate">Artist</p>
-														<svg viewBox="0 0 2 2" class="h-0.5 w-0.5 flex-none fill-gray-300">
-															<circle cx="1" cy="1" r="1" />
-														</svg>
-														<p class="whitespace-nowrap">
-															<!-- trim everythig after the word seconds -->
-															Starting from {song.start_timestamp.split('seconds')[0]} seconds
-															<input
-																class="hidden"
-																type="text"
-																name="startFrom"
-																value={song.start_milliseconds}
-															/>
-														</p>
-													</div>
+													<h2 class="min-w-0 text-sm font-semibold leading-6 text-black">
+														<span class="truncate">{index + 1}. {song.name}</span>
+														<input class="hidden" type="text" name="songId" value={song.id} />
+													</h2>
 												</div>
-											</button>
-										</form>
-									</li>
-								{/each}
-							</ul>
-						</div>
-					{/if}
-				</div>
+												<div
+													class="mt-1 flex items-center gap-x-2.5 text-xs leading-5 text-gray-700"
+												>
+													<p class="truncate">Artist</p>
+													<svg viewBox="0 0 2 2" class="h-0.5 w-0.5 flex-none fill-gray-300">
+														<circle cx="1" cy="1" r="1" />
+													</svg>
+													<p class="whitespace-nowrap">
+														<!-- trim everythig after the word seconds -->
+														Starting from {song.start_timestamp.split('seconds')[0]} seconds
+														<input
+															class="hidden"
+															type="text"
+															name="startFrom"
+															value={song.start_milliseconds}
+														/>
+													</p>
+												</div>
+											</div>
+										</button>
+									</form>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>

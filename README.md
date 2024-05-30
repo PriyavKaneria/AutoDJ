@@ -38,3 +38,4 @@ audio_features
 - [x] Show segmentations
 - [x] Show song recommendations
 - [ ] Mix songs
+- [ ] Show lyrics on track hover (curved fade out on ends)
