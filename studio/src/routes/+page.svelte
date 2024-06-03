@@ -5,15 +5,14 @@
 	import SongSelector from '$lib/components/SongSelector.svelte';
 	import type { PageData } from './$types';
 	import type { LibrarySong, AudioFeatures, RecommendedSong } from '$lib/types';
-	import AudioTrack from '$lib/components/AudioTrack.svelte';
 	import MultiAudioTrack from '$lib/components/MultiAudioTrack.svelte';
 	import DynamicBracket from '$lib/components/DynamicBracket.svelte';
 	import { enhance } from '$app/forms';
 	import { type ActionResult } from '@sveltejs/kit';
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
-	import WaveSurfer from 'wavesurfer.js';
 	import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
 	import type MultiTrack from 'wavesurfer-multitrack';
+	import { goto, invalidateAll } from '$app/navigation';
 
 	let baseSong = '';
 	$: selectedSong = '';
@@ -44,7 +43,42 @@
 	// let wavesurfer: WaveSurfer;
 	// let nextWaveSurfer: WaveSurfer;
 	let multitrack: MultiTrack;
+	let baseAudioElement: HTMLAudioElement;
+	$: baseAudioCurrentTime = 0;
 	let wsRegions: RegionsPlugin;
+
+	const loadSegmentMarkers = () => {
+		if (!analyzingSong && audioFeatures) {
+			wsRegions = multitrack.wavesurfers[0].registerPlugin(RegionsPlugin.create());
+			audioFeatures.segments_boundaries.forEach((boundary) => {
+				wsRegions.addRegion({
+					start: boundary,
+					color: 'black',
+					drag: false,
+					resize: false
+				});
+			});
+			wsRegions.on('region-clicked', (region, e) => {
+				e.stopPropagation();
+				// region.play();
+				multitrack.setTime(region.start);
+				currentSegmentEnd = region.start;
+			});
+			if (baseAudioElement) {
+				baseAudioElement.addEventListener('timeupdate', () => {
+					const currentTime = multitrack.getCurrentTime();
+					baseAudioCurrentTime = currentTime;
+					const currentSegment =
+						audioFeatures.segments_boundaries.find((boundary) => {
+							return currentTime < boundary;
+						}) || 0;
+					if (currentSegmentEnd !== currentSegment) {
+						currentSegmentEnd = currentSegment;
+					}
+				});
+			}
+		}
+	};
 
 	const handleSongSegments = (result: ActionResult) => {
 		if (result.type === 'success' && result.data) {
@@ -52,7 +86,7 @@
 				// setTimeout(() => {
 				analyzingSong = false;
 				audioFeatures = result?.data?.audioFeatures;
-				// loadSegmentMarkers();
+				loadSegmentMarkers();
 				// }, 2000);
 			}
 		}
@@ -60,6 +94,8 @@
 
 	let fetchRecommendationsButton: HTMLButtonElement;
 	$: currentSegmentEnd = 0;
+	$: trackWidth = 0;
+	$: scrollX = 0;
 	$: fetchingRecommendations = false;
 
 	$: if (currentSegmentEnd !== 0) {
@@ -67,7 +103,10 @@
 		fetchingRecommendations = true;
 	}
 
-	// $: segmentProgress = (currentSegmentEnd / (wavesurfer ? wavesurfer.getDuration() : 1)) * 100;
+	let zoom = 10; // minPxPerSec
+
+	$: segmentProgress = ((currentSegmentEnd * zoom - scrollX) / trackWidth) * 100 || 0;
+	$: console.log(segmentProgress, scrollX, trackWidth, currentSegmentEnd);
 
 	let nextBestSongs: RecommendedSong[] = [];
 
@@ -156,12 +195,25 @@
 					<span class="text-md font-medium leading-none">Song - {songData.name}</span>
 					<span class="text-sm text-gray-400">Youtube link : {songData.url}</span>
 					<div class="flex flex-col items-center space-y-2">
-						<div class="w-full">
+						<div class="w-full" bind:clientWidth={trackWidth}>
 							{#if baseSong != ''}
-								<Button class="" on:click={() => (baseSong = '')}>Change base song</Button>
+								<Button
+									class=""
+									on:click={async () => {
+										baseSong = '';
+										await invalidateAll();
+									}}>Change base song</Button
+								>
 							{/if}
 							<!-- <AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer /> -->
-							<MultiAudioTrack {songData} {songURL} {analyzeSong} bind:multitrack />
+							<MultiAudioTrack
+								{songData}
+								{songURL}
+								{analyzeSong}
+								bind:multitrack
+								bind:audioElement={baseAudioElement}
+								bind:scrollX
+							/>
 						</div>
 						<!-- {#if nextSongURL != ''}
 								<div class="w-full">
@@ -225,7 +277,7 @@
 						{/if}
 						{#if nextBestSongs.length !== 0}
 							<div class="flex flex-col space-y-2">
-								<!-- <DynamicBracket progress={segmentProgress} /> -->
+								<DynamicBracket progress={segmentProgress} />
 							</div>
 						{/if}
 						<ul role="list" class="space-y-1">

@@ -20,6 +20,8 @@
 	export let songURL: string = '';
 	export let analyzeSong: () => void;
 	export let multitrack: MultiTrack;
+	export let audioElement: HTMLAudioElement;
+	export let scrollX = 0;
 
 	let waveformContainer: HTMLDivElement;
 
@@ -30,19 +32,20 @@
 	$: currentTime = multitrack && multitrack.getCurrentTime();
 	let currentTimeSpan: HTMLSpanElement;
 
-	let audioElement: HTMLAudioElement;
-
 	const loadSong = async () => {
 		const src = songURL;
 		const blob = await fetch(src).then((resp) => resp.blob());
 		const blobURL = URL.createObjectURL(blob);
-		const elem = new Audio(blobURL);
-		elem.preload = 'metadata';
-		audioElement = elem;
-		elem.addEventListener('loadeddata', function () {
-			console.log('Audio data loaded');
-			console.log('Audio duration: ' + this.duration);
-			// audioElement = elem;
+		audioElement = new Audio(blobURL);
+		audioElement.preload = 'metadata';
+		audioElement.addEventListener('loadeddata', function () {
+			analyzeSong();
+		});
+		audioElement.addEventListener('timeupdate', () => {
+			scrollX =
+				waveformContainer && waveformContainer.children.length > 0
+					? waveformContainer.children[0].scrollLeft
+					: 0;
 		});
 
 		multitrack.addTrack({
@@ -87,7 +90,6 @@
 
 		loadingSong = false;
 		loadedSong = true;
-		analyzeSong();
 	};
 
 	// $: () => {
@@ -97,36 +99,6 @@
 	// 		currentTimeSpan.innerHTML = `<span class="text-xs text-white bg-black p-1 rounded-tr-lg">${minutes
 	// 			.toString()
 	// 			.padStart(2, '0')}:${seconds.toString().padStart(2, '0')}</span>`;
-	// 	}
-	// };
-
-	// const loadSegmentMarkers = () => {
-	// 	if (!analyzingSong && audioFeatures) {
-	// 		wsRegions = wavesurfer.registerPlugin(RegionsPlugin.create());
-	// 		audioFeatures.segments_boundaries.forEach((boundary) => {
-	// 			wsRegions.addRegion({
-	// 				start: boundary,
-	// 				color: 'black',
-	// 				drag: false,
-	// 				resize: false
-	// 			});
-	// 		});
-	// 		wsRegions.on('region-clicked', (region, e) => {
-	// 			e.stopPropagation();
-	// 			// region.play();
-	// 			wavesurfer.setTime(region.start);
-	// 			currentSegmentEnd = region.start;
-	// 		});
-	// 		wavesurfer.on('timeupdate', () => {
-	// 			const currentTime = wavesurfer.getCurrentTime();
-	// 			const currentSegment =
-	// 				audioFeatures.segments_boundaries.find((boundary) => {
-	// 					return currentTime < boundary;
-	// 				}) || 0;
-	// 			if (currentSegmentEnd !== currentSegment) {
-	// 				currentSegmentEnd = currentSegment;
-	// 			}
-	// 		});
 	// 	}
 	// };
 
