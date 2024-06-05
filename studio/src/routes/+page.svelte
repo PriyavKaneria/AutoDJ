@@ -11,14 +11,14 @@
 	import { type ActionResult } from '@sveltejs/kit';
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
 	import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
+	import EnvelopePlugin from 'wavesurfer.js/dist/plugins/envelope.js';
 	import type MultiTrack from 'wavesurfer-multitrack';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 
 	let baseSong = '';
 	$: selectedSong = '';
 
 	$: songData = (data.songLibrary.find((song) => song.id === baseSong) || {}) as LibrarySong;
-	$: nextSongData = (data.songLibrary.find((song) => song.id === nextSongURL) || {}) as LibrarySong;
 	$: formLoading = false;
 
 	$: songURL = '';
@@ -46,6 +46,7 @@
 	let baseAudioElement: HTMLAudioElement;
 	$: baseAudioCurrentTime = 0;
 	let wsRegions: RegionsPlugin;
+	let wsEnvelopes: EnvelopePlugin[] = [];
 
 	const loadSegmentMarkers = () => {
 		if (!analyzingSong && audioFeatures) {
@@ -80,6 +81,43 @@
 		}
 	};
 
+	const loadEnvelope = (trackIndex: number) => {
+		if (wsEnvelopes.length > trackIndex && wsEnvelopes[trackIndex]) {
+			wsEnvelopes[trackIndex].destroy();
+		}
+		if (multitrack.wavesurfers.length <= trackIndex) {
+			console.log(`Track ${trackIndex} not found for envelope plugin`);
+			return;
+		}
+		// disable direct interaction
+		// multitrack.wavesurfers[trackIndex].setDisabledEventEmissions(['interaction']);
+		const _envelope: EnvelopePlugin = multitrack.wavesurfers[trackIndex].registerPlugin(
+			EnvelopePlugin.create({
+				// options
+				lineColor: 'rgba(255, 0, 0, 0.6)',
+				lineWidth: '4',
+				dragPointSize: window.innerWidth < 600 ? 20 : 10,
+				dragPointFill: 'rgba(255, 255, 255, 0.8)',
+				dragPointStroke: 'rgba(255, 0, 87, 0.8)',
+				dragLine: true
+			})
+		);
+		_envelope.addPoint({
+			time: 0,
+			volume: 1
+		});
+		_envelope.addPoint({
+			time: multitrack.wavesurfers[trackIndex].getDuration(),
+			volume: 1
+		});
+		if (wsEnvelopes.length <= trackIndex) {
+			wsEnvelopes.push(_envelope);
+		} else {
+			wsEnvelopes[trackIndex] = _envelope;
+		}
+		console.log('Envelope loaded for track', trackIndex);
+	};
+
 	const handleSongSegments = (result: ActionResult) => {
 		if (result.type === 'success' && result.data) {
 			if (result.data.audioFeatures) {
@@ -87,6 +125,7 @@
 				analyzingSong = false;
 				audioFeatures = result?.data?.audioFeatures;
 				loadSegmentMarkers();
+				loadEnvelope(0);
 				// }, 2000);
 			}
 		}
@@ -106,7 +145,7 @@
 	let zoom = 10; // minPxPerSec
 
 	$: segmentProgress = ((currentSegmentEnd * zoom - scrollX) / trackWidth) * 100 || 0;
-	$: console.log(segmentProgress, scrollX, trackWidth, currentSegmentEnd);
+	// $: console.log(segmentProgress, scrollX, trackWidth, currentSegmentEnd);
 
 	let nextBestSongs: RecommendedSong[] = [];
 
@@ -120,12 +159,24 @@
 	};
 
 	$: nextSongURL = '';
+	$: nextSongStartFrom = 0;
+	$: nextSongCueFrom = 0;
+	$: nextTrackData = {
+		url: nextSongURL,
+		startFrom: nextSongStartFrom,
+		cueFrom: nextSongCueFrom
+	};
+	let callLoadNextSong = false;
 
-	const handleNextSong = (result: ActionResult) => {
+	const handleNextSong = (result: ActionResult, song: RecommendedSong) => {
 		if (result.type === 'success' && result.data) {
 			if (result.data.songURL) {
-				console.log(result.data.songURL);
 				nextSongURL = result.data.songURL;
+				const song_start_seconds = song.start_milliseconds / 1000;
+				// at currentSegmentEnd the song_start_seconds should be there
+				nextSongStartFrom = -1 * (song_start_seconds - currentSegmentEnd);
+				nextSongCueFrom = song_start_seconds;
+				callLoadNextSong = true;
 			}
 		}
 	};
@@ -207,9 +258,10 @@
 							{/if}
 							<!-- <AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer /> -->
 							<MultiAudioTrack
-								{songData}
 								{songURL}
 								{analyzeSong}
+								{nextTrackData}
+								{callLoadNextSong}
 								bind:multitrack
 								bind:audioElement={baseAudioElement}
 								bind:scrollX
@@ -289,7 +341,7 @@
 										use:enhance={() => {
 											nextSongURL = '';
 											return async ({ update, result }) => {
-												handleNextSong(result);
+												handleNextSong(result, song);
 											};
 										}}
 									>

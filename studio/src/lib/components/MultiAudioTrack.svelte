@@ -1,39 +1,38 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import WaveSurfer from 'wavesurfer.js';
-	import type { LibrarySong } from '$lib/types/LibrarySong';
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
 	import Hover from 'wavesurfer.js/dist/plugins/hover.js';
 	import TimelinePlugin from 'wavesurfer.js/plugins/timeline';
 	import ZoomPlugin from 'wavesurfer.js/plugins/zoom';
 	import MultiTrack from 'wavesurfer-multitrack';
 	import { Pause, Play, StepBack, StepForward } from 'lucide-svelte';
-	import Button from './ui/button/button.svelte';
 
-	export let songData: LibrarySong = {
-		id: '',
-		url: '',
-		name: '',
-		video: '',
-		audio: ''
-	};
 	export let songURL: string = '';
 	export let analyzeSong: () => void;
 	export let multitrack: MultiTrack;
 	export let audioElement: HTMLAudioElement;
 	export let scrollX = 0;
+	export let nextTrackData: {
+		url: string;
+		startFrom: number;
+		cueFrom: number;
+	} | null = null;
+	export let callLoadNextSong: boolean = false;
 
 	let waveformContainer: HTMLDivElement;
 
 	$: loadingSong = false;
-	$: loadedSong = false;
 
 	$: isPlaying = multitrack && multitrack.isPlaying();
-	$: currentTime = multitrack && multitrack.getCurrentTime();
 	let currentTimeSpan: HTMLSpanElement;
 
-	const loadSong = async () => {
-		const src = songURL;
+	const loadSong = async (
+		_songURL: string,
+		trackIndex: number,
+		trackStartFrom: number = 0,
+		trackCueFrom: number = 0
+	) => {
+		const src = _songURL;
 		const blob = await fetch(src).then((resp) => resp.blob());
 		const blobURL = URL.createObjectURL(blob);
 		audioElement = new Audio(blobURL);
@@ -44,14 +43,17 @@
 		audioElement.addEventListener('timeupdate', () => {
 			scrollX =
 				waveformContainer && waveformContainer.children.length > 0
-					? waveformContainer.children[0].scrollLeft
+					? waveformContainer.children[trackIndex].scrollLeft
 					: 0;
 		});
 
+		console.log('Loading song', _songURL, 'at', trackStartFrom, 'with cue from', trackCueFrom);
+
 		multitrack.addTrack({
-			id: 0,
-			startPosition: 0,
-			draggable: false,
+			id: trackIndex,
+			startPosition: trackStartFrom,
+			startCue: trackCueFrom,
+			// draggable: true,
 			options: {
 				media: audioElement,
 				backend: 'MediaElement',
@@ -61,7 +63,7 @@
 				barGap: 3,
 				barRadius: 3,
 				barHeight: 0.8,
-				dragToSeek: true,
+				// dragToSeek: true,
 				splitChannels: [
 					{
 						height: 100
@@ -76,10 +78,10 @@
 						lineColor: 'black',
 						lineWidth: 1
 					}),
-					ZoomPlugin.create({
-						deltaThreshold: 0,
-						maxZoom: 100
-					}),
+					// ZoomPlugin.create({
+					// 	deltaThreshold: 0,
+					// 	maxZoom: 100
+					// }),
 					TimelinePlugin.create({
 						primaryLabelInterval: 30,
 						secondaryLabelInterval: 5
@@ -89,18 +91,7 @@
 		});
 
 		loadingSong = false;
-		loadedSong = true;
 	};
-
-	// $: () => {
-	// 	if (currentTimeSpan) {
-	// 		const minutes = Math.floor(currentTime / 60);
-	// 		const seconds = Math.floor(currentTime % 60);
-	// 		currentTimeSpan.innerHTML = `<span class="text-xs text-white bg-black p-1 rounded-tr-lg">${minutes
-	// 			.toString()
-	// 			.padStart(2, '0')}:${seconds.toString().padStart(2, '0')}</span>`;
-	// 	}
-	// };
 
 	onMount(() => {
 		multitrack = MultiTrack.create(
@@ -108,11 +99,11 @@
 				{
 					id: 0,
 					startPosition: 0
+				},
+				{
+					id: 1,
+					startPosition: 0
 				}
-				// {
-				// 	id: 1,
-				// 	startPosition: 0,
-				// },
 			],
 			{
 				container: waveformContainer,
@@ -122,8 +113,9 @@
 				trackBackground: '#fff',
 				trackBorderColor: '#000',
 				minPxPerSec: 10,
+				// dragBounds: true,
 				timelineOptions: {
-					duration: 100
+					// height: 0
 				}
 			}
 		);
@@ -132,8 +124,12 @@
 		multitrack.once('canplay', async () => {
 			await multitrack.setSinkId('');
 			console.log('Set sinkId to default');
+			//  hide the second track
+			if (multitrack.wavesurfers.length > 1) {
+				multitrack.wavesurfers[1].renderer.parent.style.display = 'none';
+			}
 			// load the song
-			await loadSong();
+			await loadSong(songURL, 0);
 		});
 
 		// multitrack.on('', () => {
@@ -161,9 +157,21 @@
 		return () => {
 			multitrack.destroy();
 			loadingSong = false;
-			loadedSong = false;
 		};
 	});
+
+	const loadNextSong = async () => {
+		if (!nextTrackData || !multitrack) return;
+
+		// show the second track
+		if (multitrack.wavesurfers.length > 1) {
+			multitrack.wavesurfers[1].renderer.parent.style.display = 'block';
+		}
+
+		await loadSong(nextTrackData.url, 1, nextTrackData?.startFrom, nextTrackData?.cueFrom);
+	};
+
+	$: callLoadNextSong && loadNextSong();
 </script>
 
 <div class="flex flex-col items-start w-full mb-4 gap-3 relative">
