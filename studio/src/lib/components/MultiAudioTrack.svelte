@@ -8,7 +8,7 @@
 	import { Pause, Play, StepBack, StepForward } from 'lucide-svelte';
 
 	export let songURL: string = '';
-	export let analyzeSong: () => void;
+	export let analyzeSong: (trackIndex: number) => void;
 	export let multitrack: MultiTrack;
 	export let audioElement: HTMLAudioElement;
 	export let scrollX = 0;
@@ -38,7 +38,7 @@
 		audioElement = new Audio(blobURL);
 		audioElement.preload = 'metadata';
 		audioElement.addEventListener('loadeddata', function () {
-			analyzeSong();
+			analyzeSong(trackIndex);
 		});
 		audioElement.addEventListener('timeupdate', () => {
 			scrollX =

@@ -14,11 +14,12 @@
 	import EnvelopePlugin from 'wavesurfer.js/dist/plugins/envelope.js';
 	import type MultiTrack from 'wavesurfer-multitrack';
 	import { invalidateAll } from '$app/navigation';
+	import { tick } from 'svelte';
 
-	let baseSong = '';
+	$: tracks = [] as LibrarySong[];
 	$: selectedSong = '';
+	$: songData = (data.songLibrary.find((song) => song.id === selectedSong) || {}) as LibrarySong;
 
-	$: songData = (data.songLibrary.find((song) => song.id === baseSong) || {}) as LibrarySong;
 	$: formLoading = false;
 
 	$: songURL = '';
@@ -33,8 +34,13 @@
 	};
 
 	let analyzeFormButton: HTMLButtonElement;
+	let analyzeSongTrackIndex = 0;
 
-	const analyzeSong = async () => {
+	const analyzeSong = async (trackIndex: number) => {
+		if (!analyzeFormButton) return;
+		// set songId for correct track
+		analyzeSongTrackIndex = trackIndex;
+		await tick();
 		analyzeFormButton.click();
 		analyzingSong = true;
 	};
@@ -48,9 +54,9 @@
 	let wsRegions: RegionsPlugin;
 	let wsEnvelopes: EnvelopePlugin[] = [];
 
-	const loadSegmentMarkers = () => {
+	const loadSegmentMarkers = (trackIndex: number) => {
 		if (!analyzingSong && audioFeatures) {
-			wsRegions = multitrack.wavesurfers[0].registerPlugin(RegionsPlugin.create());
+			wsRegions = multitrack.wavesurfers[trackIndex].registerPlugin(RegionsPlugin.create());
 			audioFeatures.segments_boundaries.forEach((boundary) => {
 				wsRegions.addRegion({
 					start: boundary,
@@ -124,8 +130,8 @@
 				// setTimeout(() => {
 				analyzingSong = false;
 				audioFeatures = result?.data?.audioFeatures;
-				loadSegmentMarkers();
-				loadEnvelope(0);
+				loadSegmentMarkers(analyzeSongTrackIndex);
+				loadEnvelope(analyzeSongTrackIndex);
 				// }, 2000);
 			}
 		}
@@ -158,24 +164,30 @@
 		}
 	};
 
-	$: nextSongURL = '';
-	$: nextSongStartFrom = 0;
-	$: nextSongCueFrom = 0;
 	$: nextTrackData = {
-		url: nextSongURL,
-		startFrom: nextSongStartFrom,
-		cueFrom: nextSongCueFrom
+		url: '',
+		startFrom: 0,
+		cueFrom: 0
 	};
 	let callLoadNextSong = false;
 
-	const handleNextSong = (result: ActionResult, song: RecommendedSong) => {
+	const handleNextSong = async (result: ActionResult, song: RecommendedSong) => {
 		if (result.type === 'success' && result.data) {
 			if (result.data.songURL) {
-				nextSongURL = result.data.songURL;
+				const nextSongURL = result.data.songURL;
 				const song_start_seconds = song.start_milliseconds / 1000;
 				// at currentSegmentEnd the song_start_seconds should be there
-				nextSongStartFrom = -1 * (song_start_seconds - currentSegmentEnd);
-				nextSongCueFrom = song_start_seconds;
+				const nextSongStartFrom = -1 * (song_start_seconds - currentSegmentEnd);
+				const nextSongCueFrom = song_start_seconds;
+				nextTrackData = {
+					url: nextSongURL,
+					startFrom: nextSongStartFrom,
+					cueFrom: nextSongCueFrom
+				};
+				selectedSong = song.id;
+				await tick();
+				tracks.push(songData);
+				console.log(tracks);
 				callLoadNextSong = true;
 			}
 		}
@@ -212,7 +224,7 @@
 			</div> -->
 		<div class="md:order-1">
 			<div class="flex h-full flex-col space-y-4">
-				{#if baseSong == ''}
+				{#if tracks.length == 0}
 					<!-- Search song from library -->
 					<span class="text-sm font-medium leading-none">
 						Select a base song from the library
@@ -230,7 +242,9 @@
 									return async ({ update, result }) => {
 										// update();
 										handleSongURL(result);
-										baseSong = selectedSong;
+										await tick();
+										tracks.push(songData);
+										console.log(tracks);
 										formLoading = false;
 									};
 								}}
@@ -241,17 +255,17 @@
 						</div>
 					{/if}
 				{/if}
-				{#if baseSong != '' && !formLoading}
+				{#if tracks.length != 0 && !formLoading}
 					<!-- Display base song -->
 					<span class="text-md font-medium leading-none">Song - {songData.name}</span>
 					<span class="text-sm text-gray-400">Youtube link : {songData.url}</span>
 					<div class="flex flex-col items-center space-y-2">
 						<div class="w-full" bind:clientWidth={trackWidth}>
-							{#if baseSong != ''}
+							{#if tracks.length != 0}
 								<Button
 									class=""
 									on:click={async () => {
-										baseSong = '';
+										tracks = [];
 										await invalidateAll();
 									}}>Change base song</Button
 								>
@@ -288,7 +302,11 @@
 							};
 						}}
 					>
-						<input type="hidden" name="songId" value={baseSong} />
+						<input
+							type="hidden"
+							name="songId"
+							value={tracks.length ? tracks[analyzeSongTrackIndex]?.id : ''}
+						/>
 						<button type="submit" class="hidden" bind:this={analyzeFormButton}>Analyze</button>
 					</form>
 					<form
@@ -301,7 +319,11 @@
 							};
 						}}
 					>
-						<input name="songId" class="hidden" value={baseSong} />
+						<input
+							name="songId"
+							class="hidden"
+							value={tracks.length ? tracks[tracks.length - 1]?.id : ''}
+						/>
 						<input name="currentSegmentEnd" class="hidden" value={currentSegmentEnd} />
 						<button type="submit" class="hidden" bind:this={fetchRecommendationsButton}>
 							Fetch Recommendations
@@ -339,9 +361,8 @@
 										method="post"
 										action="?/getSongURL"
 										use:enhance={() => {
-											nextSongURL = '';
 											return async ({ update, result }) => {
-												handleNextSong(result, song);
+												await handleNextSong(result, song);
 											};
 										}}
 									>

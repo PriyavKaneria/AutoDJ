@@ -39,3 +39,4 @@ audio_features
 - [x] Show song recommendations
 - [ ] Mix songs
 - [ ] Show lyrics on track hover (curved fade out on ends)
+- [ ] Allow song search and add track (other than base track)
