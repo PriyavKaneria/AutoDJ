@@ -6,18 +6,12 @@
 	import ZoomPlugin from 'wavesurfer.js/plugins/zoom';
 	import MultiTrack from 'wavesurfer-multitrack';
 	import { Pause, Play, StepBack, StepForward } from 'lucide-svelte';
+	import type { TrackCue } from '$lib/types';
 
-	export let songURL: string = '';
 	export let analyzeSong: (trackIndex: number) => void;
 	export let multitrack: MultiTrack;
-	export let audioElement: HTMLAudioElement;
 	export let scrollX = 0;
-	export let nextTrackData: {
-		url: string;
-		startFrom: number;
-		cueFrom: number;
-	} | null = null;
-	export let callLoadNextSong: boolean = false;
+	export let trackCues: TrackCue[] = [];
 
 	let waveformContainer: HTMLDivElement;
 
@@ -27,25 +21,20 @@
 	let currentTimeSpan: HTMLSpanElement;
 
 	const loadSong = async (
-		_songURL: string,
 		trackIndex: number,
+		_songURL: string,
 		trackStartFrom: number = 0,
 		trackCueFrom: number = 0
 	) => {
 		const src = _songURL;
 		const blob = await fetch(src).then((resp) => resp.blob());
 		const blobURL = URL.createObjectURL(blob);
-		audioElement = new Audio(blobURL);
+		const audioElement = new Audio(blobURL);
 		audioElement.preload = 'metadata';
 		audioElement.addEventListener('loadeddata', function () {
 			analyzeSong(trackIndex);
 		});
-		audioElement.addEventListener('timeupdate', () => {
-			scrollX =
-				waveformContainer && waveformContainer.children.length > 0
-					? waveformContainer.children[trackIndex].scrollLeft
-					: 0;
-		});
+		trackCues[trackIndex].audioElement = audioElement;
 
 		console.log('Loading song', _songURL, 'at', trackStartFrom, 'with cue from', trackCueFrom);
 
@@ -103,6 +92,18 @@
 				{
 					id: 1,
 					startPosition: 0
+				},
+				{
+					id: 2,
+					startPosition: 0
+				},
+				{
+					id: 3,
+					startPosition: 0
+				},
+				{
+					id: 4,
+					startPosition: 0
 				}
 			],
 			{
@@ -126,24 +127,11 @@
 			console.log('Set sinkId to default');
 			//  hide the second track
 			if (multitrack.wavesurfers.length > 1) {
-				multitrack.wavesurfers[1].renderer.parent.style.display = 'none';
+				for (let i = 1; i < multitrack.wavesurfers.length; i++) {
+					multitrack.wavesurfers[i].renderer.parent.style.display = 'none';
+				}
 			}
-			// load the song
-			await loadSong(songURL, 0);
 		});
-
-		// multitrack.on('', () => {
-		// 	const cursorTime = document.getElementById('cursor-time');
-		// 	if (cursorTime) {
-		// 		let timeInSeconds = multitrack.getCurrentTime();
-		// 		currentTime = timeInSeconds;
-		// 		const minutes = Math.floor(timeInSeconds / 60);
-		// 		const seconds = Math.floor(timeInSeconds % 60);
-		// 		cursorTime.innerHTML = `<span class="text-xs text-white bg-black p-1 rounded-tr-lg">${minutes
-		// 			.toString()
-		// 			.padStart(2, '0')}:${seconds.toString().padStart(2, '0')}</span>`;
-		// 	}
-		// });
 
 		// listen to space key to play/pause the track
 		window.addEventListener('keydown', (event) => {
@@ -154,24 +142,32 @@
 			}
 		});
 
+		if (waveformContainer) {
+			waveformContainer.childNodes[0].addEventListener('scroll', (event) => {
+				scrollX = (event.target as HTMLDivElement).scrollLeft;
+				console.log('Scrolling', scrollX);
+			});
+		}
+
 		return () => {
 			multitrack.destroy();
 			loadingSong = false;
 		};
 	});
 
-	const loadNextSong = async () => {
-		if (!nextTrackData || !multitrack) return;
+	export const loadNextSong = async (trackIndex: number) => {
+		console.log('Loading next song', trackIndex, 'from', trackCues.length, 'tracks');
+
+		if (!trackCues.length || trackIndex >= trackCues.length || !multitrack) return;
 
 		// show the second track
-		if (multitrack.wavesurfers.length > 1) {
-			multitrack.wavesurfers[1].renderer.parent.style.display = 'block';
+		if (multitrack.wavesurfers.length > trackIndex) {
+			multitrack.wavesurfers[trackIndex].renderer.parent.style.display = 'block';
 		}
 
-		await loadSong(nextTrackData.url, 1, nextTrackData?.startFrom, nextTrackData?.cueFrom);
+		const nextTrackData = trackCues[trackIndex];
+		await loadSong(trackIndex, nextTrackData.url, nextTrackData?.startFrom, nextTrackData?.cueFrom);
 	};
-
-	$: callLoadNextSong && loadNextSong();
 </script>
 
 <div class="flex flex-col items-start w-full mb-4 gap-3 relative">
