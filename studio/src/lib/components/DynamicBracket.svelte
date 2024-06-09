@@ -14,7 +14,7 @@
 		})();
 </script>
 
-<div class="flex w-full items-center justify-center">
+<div class="flex w-full items-center justify-center -mb-12">
 	<div class="bracket" bind:offsetWidth={bracketWidth}>
 		<div bind:this={extrudingLine} class="extruding-line"></div>
 		<div class="border-tip-left"></div>
@@ -25,7 +25,7 @@
 			max="100"
 			step="0.25"
 			bind:value={progress}
-			class="absolute w-full h-full opacity-0 cursor-pointer"
+			class="absolute w-full h-full opacity-0 cursor-pointer hidden"
 		/>
 	</div>
 </div>
