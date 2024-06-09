@@ -1,4 +1,4 @@
-# AIDJ
+# AutoDJ
 
 ```
 database
@@ -32,11 +32,13 @@ audio_features
 ```
 
 ## AutoDJ Features -
+- [x] Show segmentations
+- [x] Show song recommendations
+- [x] Make recommendation box floating
 - [ ] Load mp3 audio file
 - [ ] Direct load from youtube
 - [ ] Extract audio features on server
-- [x] Show segmentations
-- [x] Show song recommendations
 - [ ] Mix songs
 - [ ] Show lyrics on track hover (curved fade out on ends)
+  - [ ] Show lyrics while in recommendation box
 - [ ] Allow song search and add track (other than base track)

@@ -4,9 +4,8 @@
 	import { Actions, Save, Share } from '$lib/components/navbar';
 	import SongSelector from '$lib/components/SongSelector.svelte';
 	import type { PageData } from './$types';
-	import type { LibrarySong, AudioFeatures, RecommendedSong } from '$lib/types';
+	import type { LibrarySong, AudioFeatures, RecommendedSong, TrackCue } from '$lib/types';
 	import MultiAudioTrack from '$lib/components/MultiAudioTrack.svelte';
-	import DynamicBracket from '$lib/components/DynamicBracket.svelte';
 	import { enhance } from '$app/forms';
 	import { type ActionResult } from '@sveltejs/kit';
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
@@ -15,10 +14,17 @@
 	import type MultiTrack from 'wavesurfer-multitrack';
 	import { invalidateAll } from '$app/navigation';
 	import { tick } from 'svelte';
+	import RecommendationBox from './RecommendationBox.svelte';
 
 	$: tracks = [] as LibrarySong[];
-	$: selectedSong = '';
-	$: songData = (data.songLibrary.find((song) => song.id === selectedSong) || {}) as LibrarySong;
+	$: trackCues = [] as TrackCue[];
+	$: selectedBaseSong = '';
+	$: baseSongData = (data.songLibrary.find((song) => song.id === selectedBaseSong) ||
+		{}) as LibrarySong;
+
+	const getSongData = (songId: string) => {
+		return data.songLibrary.find((song) => song.id === songId) || ({} as LibrarySong);
+	};
 
 	$: formLoading = false;
 
@@ -35,11 +41,14 @@
 
 	let analyzeFormButton: HTMLButtonElement;
 	let analyzeSongTrackIndex = 0;
+	$: analyzeSongId = tracks.length ? tracks[analyzeSongTrackIndex]?.id : ''; // songId for analyzing the analyzeSongTrackIndex track
+	$: lastTrackSongId = tracks.length ? tracks[tracks.length - 1]?.id : ''; // songId for fetching recommendations for the last track
 
 	const analyzeSong = async (trackIndex: number) => {
 		if (!analyzeFormButton) return;
 		// set songId for correct track
 		analyzeSongTrackIndex = trackIndex;
+		console.log('Analyzing song', trackIndex);
 		await tick();
 		analyzeFormButton.click();
 		analyzingSong = true;
@@ -49,10 +58,10 @@
 	// let wavesurfer: WaveSurfer;
 	// let nextWaveSurfer: WaveSurfer;
 	let multitrack: MultiTrack;
-	let baseAudioElement: HTMLAudioElement;
-	$: baseAudioCurrentTime = 0;
 	let wsRegions: RegionsPlugin;
 	let wsEnvelopes: EnvelopePlugin[] = [];
+	let multiAudioTrackComponent: MultiAudioTrack;
+	let prevAudioElementEventAbortController: AbortController;
 
 	const loadSegmentMarkers = (trackIndex: number) => {
 		if (!analyzingSong && audioFeatures) {
@@ -69,20 +78,39 @@
 				e.stopPropagation();
 				// region.play();
 				multitrack.setTime(region.start);
-				currentSegmentEnd = region.start;
 			});
-			if (baseAudioElement) {
-				baseAudioElement.addEventListener('timeupdate', () => {
-					const currentTime = multitrack.getCurrentTime();
-					baseAudioCurrentTime = currentTime;
-					const currentSegment =
-						audioFeatures.segments_boundaries.find((boundary) => {
-							return currentTime < boundary;
-						}) || 0;
-					if (currentSegmentEnd !== currentSegment) {
-						currentSegmentEnd = currentSegment;
-					}
-				});
+
+			const timeUpdateListener = () => {
+				const currentTime = multitrack.wavesurfers[trackIndex].getCurrentTime();
+				const currentSegment =
+					audioFeatures.segments_boundaries.find((boundary) => {
+						return currentTime < boundary;
+					}) || 0;
+				if (currentSegmentEnd !== currentSegment) {
+					currentSegmentEnd = currentSegment;
+					console.log('Current segment end', currentSegmentEnd);
+				}
+			};
+
+			if (trackIndex > 0) {
+				// remove event listener from previous track
+				const prevAudioElement = trackCues[trackIndex - 1].audioElement;
+				if (prevAudioElement) {
+					console.log(prevAudioElement.ontimeupdate);
+					prevAudioElementEventAbortController.abort(); // this genius works
+				}
+				console.log('Removed timeupdate listener from track', trackIndex - 1);
+				console.log(prevAudioElement);
+			}
+			if (trackIndex < trackCues.length) {
+				// add event listener to current track
+				const audioElement = trackCues[trackIndex].audioElement;
+				if (audioElement) {
+					prevAudioElementEventAbortController = new AbortController();
+					audioElement.addEventListener('timeupdate', timeUpdateListener, {
+						signal: prevAudioElementEventAbortController.signal
+					});
+				}
 			}
 		}
 	};
@@ -122,6 +150,47 @@
 			wsEnvelopes[trackIndex] = _envelope;
 		}
 		console.log('Envelope loaded for track', trackIndex);
+
+		// set envelope points for mixing tracks
+		if (trackIndex > 0) {
+			const prevEnvelope = wsEnvelopes[trackIndex - 1];
+			// clear all points after the current segment end
+			prevEnvelope.getPoints().map((point) => {
+				if (point.time > currentSegmentEnd) {
+					prevEnvelope.removePoint(point);
+				}
+			});
+			// set the fade out points for the previous track
+			prevEnvelope.addPoint({
+				time: currentSegmentEnd - 1,
+				volume: 1
+			});
+			prevEnvelope.addPoint({
+				time: currentSegmentEnd + 1,
+				volume: 0
+			});
+			const currentEnvelope = wsEnvelopes[trackIndex];
+
+			const nextTrackData = trackCues[trackIndex];
+
+			// clear all points before the current segment end
+			// because the current segment end of the previous track is aligned with next track data start from
+			const currentSegmentEquivalentForNextTrack = nextTrackData.cueFrom + 1;
+			currentEnvelope.getPoints().map((point) => {
+				if (point.time < currentSegmentEquivalentForNextTrack) {
+					currentEnvelope.removePoint(point);
+				}
+			});
+			// set the fade in points for the current track
+			currentEnvelope.addPoint({
+				time: currentSegmentEquivalentForNextTrack - 1,
+				volume: 0
+			});
+			currentEnvelope.addPoint({
+				time: currentSegmentEquivalentForNextTrack + 1,
+				volume: 1
+			});
+		}
 	};
 
 	const handleSongSegments = (result: ActionResult) => {
@@ -164,33 +233,10 @@
 		}
 	};
 
-	$: nextTrackData = {
-		url: '',
-		startFrom: 0,
-		cueFrom: 0
-	};
-	let callLoadNextSong = false;
-
-	const handleNextSong = async (result: ActionResult, song: RecommendedSong) => {
-		if (result.type === 'success' && result.data) {
-			if (result.data.songURL) {
-				const nextSongURL = result.data.songURL;
-				const song_start_seconds = song.start_milliseconds / 1000;
-				// at currentSegmentEnd the song_start_seconds should be there
-				const nextSongStartFrom = -1 * (song_start_seconds - currentSegmentEnd);
-				const nextSongCueFrom = song_start_seconds;
-				nextTrackData = {
-					url: nextSongURL,
-					startFrom: nextSongStartFrom,
-					cueFrom: nextSongCueFrom
-				};
-				selectedSong = song.id;
-				await tick();
-				tracks.push(songData);
-				console.log(tracks);
-				callLoadNextSong = true;
-			}
-		}
+	const nextSongSelectedEvent = async (trackIndex: number) => {
+		multitrack.pause();
+		await tick();
+		await multiAudioTrackComponent.loadNextSong(trackIndex);
 	};
 
 	export let data: PageData;
@@ -233,7 +279,7 @@
 						<span class="text-xs text-muted-foreground">No songs found.</span>
 					{:else}
 						<div class="flex items-center space-x-2">
-							<SongSelector songLibrary={data.songLibrary} bind:selectedValue={selectedSong} />
+							<SongSelector songLibrary={data.songLibrary} bind:selectedValue={selectedBaseSong} />
 							<form
 								method="post"
 								action="?/getSongURL"
@@ -243,55 +289,51 @@
 										// update();
 										handleSongURL(result);
 										await tick();
-										tracks.push(songData);
-										console.log(tracks);
+										tracks = [...tracks, baseSongData];
+										trackCues = [
+											...trackCues,
+											{
+												url: songURL,
+												startFrom: 0,
+												cueFrom: 0
+											}
+										];
+										console.log(tracks, trackCues);
+										await tick();
+
+										await multiAudioTrackComponent.loadNextSong(0);
 										formLoading = false;
 									};
 								}}
 							>
-								<input type="hidden" name="songId" value={selectedSong} />
+								<input type="hidden" name="songId" value={selectedBaseSong} />
 								<Button type="submit">Load</Button>
 							</form>
 						</div>
 					{/if}
 				{/if}
-				{#if tracks.length != 0 && !formLoading}
+				<!-- {#if tracks.length != 0 && !formLoading} -->
+				<div hidden={formLoading || !tracks.length}>
 					<!-- Display base song -->
-					<span class="text-md font-medium leading-none">Song - {songData.name}</span>
-					<span class="text-sm text-gray-400">Youtube link : {songData.url}</span>
+					<span class="text-md font-medium leading-none">Song - {baseSongData.name}</span>
+					<span class="text-sm text-gray-400">Youtube link : {baseSongData.url}</span>
 					<div class="flex flex-col items-center space-y-2">
 						<div class="w-full" bind:clientWidth={trackWidth}>
 							{#if tracks.length != 0}
-								<Button
-									class=""
-									on:click={async () => {
-										tracks = [];
-										await invalidateAll();
-									}}>Change base song</Button
-								>
+								<a href="/" data-sveltekit-reload>
+									<Button class="">Change base song</Button>
+								</a>
 							{/if}
-							<!-- <AudioTrack {songData} {songURL} {analyzeSong} bind:wavesurfer /> -->
 							<MultiAudioTrack
-								{songURL}
 								{analyzeSong}
-								{nextTrackData}
-								{callLoadNextSong}
+								bind:trackCues
 								bind:multitrack
-								bind:audioElement={baseAudioElement}
 								bind:scrollX
+								bind:this={multiAudioTrackComponent}
 							/>
 						</div>
-						<!-- {#if nextSongURL != ''}
-								<div class="w-full">
-									<AudioTrack
-										songData={nextSongData}
-										songURL={nextSongURL}
-										analyzeSong={() => {}}
-										bind:wavesurfer={nextWaveSurfer}
-									/>
-								</div>
-							{/if} -->
 					</div>
+					<!-- analyzeSong -->
 					<form
 						method="post"
 						action="?/analyzeSong"
@@ -302,13 +344,10 @@
 							};
 						}}
 					>
-						<input
-							type="hidden"
-							name="songId"
-							value={tracks.length ? tracks[analyzeSongTrackIndex]?.id : ''}
-						/>
+						<input type="hidden" name="songId" value={analyzeSongId} />
 						<button type="submit" class="hidden" bind:this={analyzeFormButton}>Analyze</button>
 					</form>
+					<!-- getNextBestSongs -->
 					<form
 						method="post"
 						action="?/getNextBestSongs"
@@ -319,90 +358,49 @@
 							};
 						}}
 					>
-						<input
-							name="songId"
-							class="hidden"
-							value={tracks.length ? tracks[tracks.length - 1]?.id : ''}
-						/>
+						<input name="songId" class="hidden" value={lastTrackSongId} />
 						<input name="currentSegmentEnd" class="hidden" value={currentSegmentEnd} />
 						<button type="submit" class="hidden" bind:this={fetchRecommendationsButton}>
 							Fetch Recommendations
 						</button>
 					</form>
-					<div class="relative flex flex-col">
-						{#if analyzingSong || fetchingRecommendations}
-							<div class="w-full absolute h-full flex backdrop-blur-sm">
-								<div class="flex items-center justify-center space-x-2 h-48 overflow-hidden">
-									<LottiePlayer
-										src={'/audio_wave_loader.json'}
-										autoplay={true}
-										loop={true}
-										controls={false}
-										background="transparent"
-										renderer="svg"
-									/>
-									<span
-										class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lg text-secondary-foreground"
-									>
-										{analyzingSong ? 'Analyzing song...' : 'Fetching recommendations...'}
-									</span>
-								</div>
+					<!-- Loader for fetching next best songs -->
+					{#if analyzingSong}
+						<div class="w-full absolute h-full flex backdrop-blur-sm z-10 min-h-96">
+							<div class="flex items-center justify-center space-x-2 h-48 overflow-hidden">
+								<LottiePlayer
+									src={'/audio_wave_loader.json'}
+									autoplay={true}
+									loop={true}
+									controls={false}
+									background="transparent"
+									renderer="svg"
+								/>
+								<span
+									class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-lg text-secondary-foreground"
+								>
+									Analyzing song...
+								</span>
 							</div>
-						{/if}
+						</div>
+					{/if}
+					<div class="relative flex flex-col w-full z-0">
 						{#if nextBestSongs.length !== 0}
-							<div class="flex flex-col space-y-2">
-								<DynamicBracket progress={segmentProgress} />
-							</div>
+							<RecommendationBox
+								bind:tracks
+								bind:trackCues
+								bind:nextBestSongs
+								{fetchingRecommendations}
+								{segmentProgress}
+								{analyzeSongTrackIndex}
+								{getSongData}
+								{currentSegmentEnd}
+								{nextSongSelectedEvent}
+							/>
 						{/if}
-						<ul role="list" class="space-y-1">
-							{#each nextBestSongs as song, index}
-								<li class="overflow-hidden rounded-md bg-white px-6 py-3 shadow cursor-pointer">
-									<form
-										method="post"
-										action="?/getSongURL"
-										use:enhance={() => {
-											return async ({ update, result }) => {
-												await handleNextSong(result, song);
-											};
-										}}
-									>
-										<button type="submit">
-											<div class="min-w-0 flex-auto">
-												<div class="flex items-center gap-x-3">
-													<div class="flex-none rounded-full p-1 text-rose-400 bg-rose-400/10">
-														<div class="h-2 w-2 rounded-full bg-current"></div>
-													</div>
-													<h2 class="min-w-0 text-sm font-semibold leading-6 text-black">
-														<span class="truncate">{index + 1}. {song.name}</span>
-														<input class="hidden" type="text" name="songId" value={song.id} />
-													</h2>
-												</div>
-												<div
-													class="mt-1 flex items-center gap-x-2.5 text-xs leading-5 text-gray-700"
-												>
-													<p class="truncate">Artist</p>
-													<svg viewBox="0 0 2 2" class="h-0.5 w-0.5 flex-none fill-gray-300">
-														<circle cx="1" cy="1" r="1" />
-													</svg>
-													<p class="whitespace-nowrap">
-														<!-- trim everythig after the word seconds -->
-														Starting from {song.start_timestamp.split('seconds')[0]} seconds
-														<input
-															class="hidden"
-															type="text"
-															name="startFrom"
-															value={song.start_milliseconds}
-														/>
-													</p>
-												</div>
-											</div>
-										</button>
-									</form>
-								</li>
-							{/each}
-						</ul>
 					</div>
-				{/if}
+					<!-- {/if} -->
+				</div>
 			</div>
 		</div>
 	</div>
