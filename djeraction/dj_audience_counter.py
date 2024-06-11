@@ -7,7 +7,7 @@ import time
 def nothing(x):
     pass
 
-def process_image(image_path = "", image = None, min_area = 2, max_area = 100):
+def process_image(image_path = "", image = None, min_area = 0, max_area = 88):
     if image is not None:
         img = image
     else:
@@ -18,12 +18,6 @@ def process_image(image_path = "", image = None, min_area = 2, max_area = 100):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
     # no need to apply GaussianBlur as we don't care about noise due to high threshold
-    
-    # hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
-    # lower = np.array([0, 5, 180], dtype="uint8")
-    # upper = np.array([179, 40, 255], dtype="uint8")
-    # mask = cv2.inRange(hsv, lower, upper)
 
     # Apply adaptive thresholding
     thresh = cv2.threshold(gray, 170, 255, cv2.THRESH_BINARY_INV)[1]
@@ -94,14 +88,16 @@ def draw_flashlights_and_count(img, flashlights, delay=0.001):
     cv2.imshow("Count", count_img)
     for idx, cnt in enumerate(flashlights):
         x, y, w, h = cv2.boundingRect(cnt)
-        cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        # cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        cv2.circle(img, (x+w//2, y+h//2), 1, (0, 255, 0), 2)
         
         # clear count image
         count_img.fill(0)
         cv2.putText(count_img, f"Count: {idx+1}", (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         cv2.imshow("Count", count_img)
         cv2.imshow("Flashlights", img)
-        cv2.waitKey(1)
+        if idx % 5 == 0:
+            cv2.waitKey(1)
         # time.sleep(delay)  # Staggered animation delay - not needed for cv2.waitKey
     return img
 
@@ -146,27 +142,15 @@ def draw_flashlights_and_count_left_right(img, flashlights, mid, delay=0.001) ->
     return (img, (left_count, right_count))
 
 def opinion_count(image_path="", image = None):
+    img, flashlights = process_image(image_path=image_path, image=image)
+    cv2.imshow("Original", img)
     
     # Draw flashlights with staggered animation
     cv2.namedWindow("Flashlights", cv2.WINDOW_NORMAL)
     cv2.moveWindow("Flashlights", 150, 250)
-    cv2.createTrackbar('MinArea','Flashlights',0,1000,nothing)
-    cv2.createTrackbar('MaxArea','Flashlights',1000,1000,nothing)
+    img_with_boxes = draw_flashlights_and_count(img.copy(), flashlights)
+    cv2.imshow("Flashlights", img_with_boxes)
 
-    while True:
-        min_area = cv2.getTrackbarPos('MinArea','Flashlights')
-        max_area = cv2.getTrackbarPos('MaxArea','Flashlights')
-
-        img, flashlights = process_image(image_path=image_path, image=image, min_area=min_area, max_area=max_area)
-        cv2.imshow("Original", img)
-        img_with_boxes = draw_flashlights_and_count(img.copy(), flashlights)
-        cv2.imshow("Flashlights", img_with_boxes)
-
-        # wait for key press for next iteration
-        key = cv2.waitKey(0) & 0xFF
-        if key == ord('q'):
-            break
-    
     # Display images
     cv2.waitKey(0)
     cv2.destroyAllWindows()
