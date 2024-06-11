@@ -58,10 +58,27 @@
 	// let wavesurfer: WaveSurfer;
 	// let nextWaveSurfer: WaveSurfer;
 	let multitrack: MultiTrack;
+	let prevWsRegions: RegionsPlugin;
 	let wsRegions: RegionsPlugin;
 	let wsEnvelopes: EnvelopePlugin[] = [];
 	let multiAudioTrackComponent: MultiAudioTrack;
 	let prevAudioElementEventAbortController: AbortController;
+
+	const onTrackTimeUpdate = (trackIndex: number, previousTime: boolean = false) => {
+		let currentTime;
+		if (previousTime) {
+			currentTime = trackCues[trackIndex].cueFrom;
+		} else {
+			currentTime = multitrack.wavesurfers[trackIndex].getCurrentTime();
+		}
+		const currentSegment =
+			audioFeatures.segments_boundaries.find((boundary) => {
+				return currentTime < boundary;
+			}) || 0;
+		if (currentSegmentEnd !== currentSegment) {
+			currentSegmentEnd = currentSegment;
+		}
+	};
 
 	const loadSegmentMarkers = (trackIndex: number) => {
 		if (!analyzingSong && audioFeatures) {
@@ -80,18 +97,6 @@
 				multitrack.setTime(region.start);
 			});
 
-			const timeUpdateListener = () => {
-				const currentTime = multitrack.wavesurfers[trackIndex].getCurrentTime();
-				const currentSegment =
-					audioFeatures.segments_boundaries.find((boundary) => {
-						return currentTime < boundary;
-					}) || 0;
-				if (currentSegmentEnd !== currentSegment) {
-					currentSegmentEnd = currentSegment;
-					console.log('Current segment end', currentSegmentEnd);
-				}
-			};
-
 			if (trackIndex > 0) {
 				// remove event listener from previous track
 				const prevAudioElement = trackCues[trackIndex - 1].audioElement;
@@ -100,18 +105,37 @@
 					prevAudioElementEventAbortController.abort(); // this genius works
 				}
 				console.log('Removed timeupdate listener from track', trackIndex - 1);
-				console.log(prevAudioElement);
+				// set cueTo for previous track
+				trackCues[trackIndex - 1].cueTo = currentSegmentEnd;
 			}
 			if (trackIndex < trackCues.length) {
 				// add event listener to current track
 				const audioElement = trackCues[trackIndex].audioElement;
 				if (audioElement) {
 					prevAudioElementEventAbortController = new AbortController();
-					audioElement.addEventListener('timeupdate', timeUpdateListener, {
-						signal: prevAudioElementEventAbortController.signal
-					});
+					audioElement.addEventListener(
+						'timeupdate',
+						() => {
+							onTrackTimeUpdate(trackIndex);
+						},
+						{
+							signal: prevAudioElementEventAbortController.signal
+						}
+					);
+					currentSegmentOffset = Math.abs(trackCues[trackIndex].startFrom);
 				}
 			}
+			if (prevWsRegions) {
+				prevWsRegions.clearRegions();
+				prevWsRegions.addRegion({
+					start: currentSegmentEnd + 1,
+					end: trackCues[trackIndex - 1].duration,
+					color: 'rgba(0, 0, 0, 0.8)',
+					drag: false,
+					resize: false
+				});
+			}
+			prevWsRegions = wsRegions;
 		}
 	};
 
@@ -201,6 +225,7 @@
 				audioFeatures = result?.data?.audioFeatures;
 				loadSegmentMarkers(analyzeSongTrackIndex);
 				loadEnvelope(analyzeSongTrackIndex);
+				onTrackTimeUpdate(analyzeSongTrackIndex, true);
 				// }, 2000);
 			}
 		}
@@ -208,6 +233,7 @@
 
 	let fetchRecommendationsButton: HTMLButtonElement;
 	$: currentSegmentEnd = 0;
+	$: currentSegmentOffset = 0;
 	$: trackWidth = 0;
 	$: scrollX = 0;
 	$: fetchingRecommendations = false;
@@ -219,8 +245,9 @@
 
 	let zoom = 10; // minPxPerSec
 
-	$: segmentProgress = ((currentSegmentEnd * zoom - scrollX) / trackWidth) * 100 || 0;
-	// $: console.log(segmentProgress, scrollX, trackWidth, currentSegmentEnd);
+	$: segmentProgress =
+		(((currentSegmentEnd - currentSegmentOffset) * zoom - scrollX) / trackWidth) * 100 || 0;
+	$: console.log(currentSegmentEnd, zoom, scrollX, currentSegmentOffset, trackWidth);
 
 	let nextBestSongs: RecommendedSong[] = [];
 

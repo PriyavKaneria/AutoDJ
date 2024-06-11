@@ -32,6 +32,7 @@
 		const audioElement = new Audio(blobURL);
 		audioElement.preload = 'metadata';
 		audioElement.addEventListener('loadeddata', function () {
+			trackCues[trackIndex].duration = audioElement.duration;
 			analyzeSong(trackIndex);
 		});
 		trackCues[trackIndex].audioElement = audioElement;
@@ -40,8 +41,8 @@
 
 		multitrack.addTrack({
 			id: trackIndex,
-			startPosition: trackStartFrom,
-			startCue: trackCueFrom,
+			startPosition: trackStartFrom, // where the track position should start from
+			startCue: trackCueFrom, // where the track should start playing from
 			// draggable: true,
 			options: {
 				media: audioElement,
