@@ -4,7 +4,7 @@ VENV = env
 PIP = $(VENV)/scripts/pip.exe
 PYTHON_VENV = $(VENV)/scripts/python.exe
 SCRIPT = dj_audience_counter.py
-IMAGE_PATH = images/test_1.jpg
+IMAGE_PATH = images/red.png
 
 # Targets
 .PHONY: all setup install run-opinion run-battle clean
@@ -23,9 +23,17 @@ run-opinion:
 	@echo "Running in opinion_count mode..."
 	$(PYTHON_VENV) $(SCRIPT) --mode opinion_count --image $(IMAGE_PATH)
 
+run-opinion-camera:
+	@echo "Running in opinion_count mode with camera..."
+	$(PYTHON_VENV) $(SCRIPT) --mode opinion_count
+
 run-battle:
 	@echo "Running in battle_opinion mode..."
 	$(PYTHON_VENV) $(SCRIPT) --mode battle_opinion --image $(IMAGE_PATH)
+
+run-battle-camera:
+	@echo "Running in battle_opinion mode with camera..."
+	$(PYTHON_VENV) $(SCRIPT) --mode battle_opinion
 
 clean:
 	@echo "Cleaning up..."
