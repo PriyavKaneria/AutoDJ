@@ -10,6 +10,7 @@
 	export let fetchingRecommendations = false;
 	export let nextBestSongs: RecommendedSong[] = [];
 	export let currentSegmentEnd = 0;
+	export let currentSegmentOffset = 0;
 	export let analyzeSongTrackIndex = 0;
 	export let tracks: LibrarySong[] = [];
 	export let trackCues: TrackCue[] = [];
@@ -20,10 +21,27 @@
 		if (result.type === 'success' && result.data) {
 			if (result.data.songURL) {
 				const nextSongURL = result.data.songURL;
-				const song_start_seconds = song.start_milliseconds / 1000;
+				const songStartSeconds = song.start_milliseconds / 1000;
 				// at currentSegmentEnd the song_start_seconds should be there
-				const nextSongStartFrom = -1 * (song_start_seconds - currentSegmentEnd);
-				const nextSongCueFrom = song_start_seconds - 1; // cue from 1 second before the song starts for fade in
+				const nextSongStartFrom =
+					-1 * (songStartSeconds - currentSegmentEnd + currentSegmentOffset);
+				const nextSongCueFrom = songStartSeconds - 1; // cue from 1 second before the song starts for fade in
+				console.log('song start seconds', songStartSeconds);
+				console.log(
+					'Next song start from',
+					nextSongStartFrom,
+					'due to current segment end',
+					currentSegmentEnd,
+					'and offset',
+					currentSegmentOffset
+				);
+				console.log(
+					'Next song cue from',
+					nextSongCueFrom,
+					'due to current segment offset',
+					currentSegmentOffset
+				);
+
 				const nextTrackData = {
 					url: nextSongURL,
 					startFrom: nextSongStartFrom,

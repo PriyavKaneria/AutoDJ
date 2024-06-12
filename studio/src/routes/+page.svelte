@@ -101,7 +101,6 @@
 				// remove event listener from previous track
 				const prevAudioElement = trackCues[trackIndex - 1].audioElement;
 				if (prevAudioElement) {
-					console.log(prevAudioElement.ontimeupdate);
 					prevAudioElementEventAbortController.abort(); // this genius works
 				}
 				console.log('Removed timeupdate listener from track', trackIndex - 1);
@@ -130,7 +129,7 @@
 				prevWsRegions.addRegion({
 					start: currentSegmentEnd + 1,
 					end: trackCues[trackIndex - 1].duration,
-					color: 'rgba(0, 0, 0, 0.8)',
+					color: 'rgba(0, 0, 0, 0.7)',
 					drag: false,
 					resize: false
 				});
@@ -232,9 +231,13 @@
 	};
 
 	let fetchRecommendationsButton: HTMLButtonElement;
+	// current track segment end (position of next black line after cursor relative to the track)
 	$: currentSegmentEnd = 0;
+	// current track segment offset (offset of the track relative to previous track)
 	$: currentSegmentOffset = 0;
+	// width of the track container (fixed once loaded)
 	$: trackWidth = 0;
+	// scroll position of the global track container
 	$: scrollX = 0;
 	$: fetchingRecommendations = false;
 
@@ -247,7 +250,6 @@
 
 	$: segmentProgress =
 		(((currentSegmentEnd - currentSegmentOffset) * zoom - scrollX) / trackWidth) * 100 || 0;
-	$: console.log(currentSegmentEnd, zoom, scrollX, currentSegmentOffset, trackWidth);
 
 	let nextBestSongs: RecommendedSong[] = [];
 
@@ -422,6 +424,7 @@
 								{analyzeSongTrackIndex}
 								{getSongData}
 								{currentSegmentEnd}
+								{currentSegmentOffset}
 								{nextSongSelectedEvent}
 							/>
 						{/if}
