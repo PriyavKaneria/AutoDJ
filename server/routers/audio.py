@@ -1,16 +1,18 @@
 import asyncio
+import logging
 import os
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 router = APIRouter()
+logger = logging.getLogger("uvicorn")
 
 @router.get("/stream/{audio_id}")
-def stream_audio(audio_id: str):
+async def stream_audio(audio_id: str):
     audio_file = f"server/../polymath/library/{audio_id}.aac"
     if not os.path.exists(audio_file):
         return {"error": "Audio file not found"}
-
+    
     async def iterfile():
         try:
             with open(audio_file, mode="rb") as aacfile:

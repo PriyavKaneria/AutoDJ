@@ -23,4 +23,4 @@ app.include_router(search.router)
 
 @app.get("/")
 async def root():
-    return {"message": "Server is running 🚀"}
+    return {"message": "Server is running🚀"}

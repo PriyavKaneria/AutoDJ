@@ -1,11 +1,13 @@
 import json
 import os
+from aioredis import Redis
 import dill as pickle
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
 from server.models.database import Database
 from server.models.video import Video
+from server.redis_cache import get_redis
 from server.utils import NumpyValuesEncoder, custom_frame_to_time, load_audio_features
 
 router = APIRouter()
@@ -33,13 +35,23 @@ def get_song_library():
     })
 
 @router.get("/analyze/{video_id}")
-def analyze_video(video_id: str):
+async def analyze_video(video_id: str, redis: Redis = Depends(get_redis)):
     # check if the video exists in the database
     if video_id not in song_database:
         return JSONResponse({
             "status": status.HTTP_404_NOT_FOUND,
             "message": "Video not found in the library"
         })
+    # check cache for the analyzed data
+    cache_key = f"audio_features:{video_id}"
+    cache_data = await redis.get(cache_key)
+    if cache_data:
+        return JSONResponse({
+            "status": status.HTTP_200_OK,
+            "message": "Analyzed data loaded from cache",
+            "data": json.loads(cache_data),
+        })
+    
     # get the analyzed data for the video
     analyzed_file = f"{library_path}/{video_id}.a"
     if not os.path.exists(analyzed_file):
@@ -51,10 +63,7 @@ def analyze_video(video_id: str):
     audio_features = load_audio_features(analyzed_file)
     # convert segment boundaries to time
     audio_features.segments_boundaries = [custom_frame_to_time(frame) for frame in audio_features.segments_boundaries]
-    return JSONResponse({
-        "status": status.HTTP_200_OK,
-        "message": "Analyzed data loaded successfully",
-        "data": json.loads(json.dumps({
+    data = json.loads(json.dumps({
             "id": audio_features.id,
             "tempo": audio_features.tempo,
             "duration": audio_features.duration,
@@ -68,4 +77,10 @@ def analyze_video(video_id: str):
             "frequency": audio_features.frequency,
             "key": audio_features.key,
         }, cls=NumpyValuesEncoder))
+    # cache the analyzed data
+    await redis.set(cache_key, json.dumps(data))
+    return JSONResponse({
+        "status": status.HTTP_200_OK,
+        "message": "Analyzed data loaded successfully",
+        "data": data
     })

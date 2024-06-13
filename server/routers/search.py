@@ -1,8 +1,10 @@
-from fastapi import APIRouter, status
+from aioredis import Redis
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 import numpy as np
 from pydantic import BaseModel
 
+from server.redis_cache import get_redis
 from server.utils import find_nearest_neighbors, load_audio_features, load_feature_vectors, milliseconds_to_readable
 from server.routers.library import song_database, library_path
 
@@ -24,7 +26,7 @@ def find_next_song(current_song_id: str, current_segment_end: int):
     if current_audio_features is None:
         print(f"Audio features not found for song ID: {current_song_id}")
         return []
-
+    
     # Calulate the beat index for the current segment end
     beat_idx = np.where(np.insert(current_audio_features.beats, 0, 0.) <= current_segment_end / 1000)[0][-1] - 1
 
@@ -65,7 +67,7 @@ class SearchRequest(BaseModel):
     current_segment_end: int
 
 @router.post("/search")
-async def search(request: SearchRequest):
+async def search(request: SearchRequest, redis: Redis = Depends(get_redis)):
     '''
     Find the best next songs to play after a given segment in the current song.
     
@@ -79,8 +81,21 @@ async def search(request: SearchRequest):
     current_song_id = request.current_song_id
     current_segment_end = request.current_segment_end
     current_segment_end_milliseconds = current_segment_end * 1000
+
+    # check cache for the recommended songs
+    cache_key = f"recommended_songs:{current_song_id}:{current_segment_end}"
+    cache_data = await redis.get(cache_key)
+
+    best_next_songs = []
+
     # print(f"Current Song ID: {current_song_id}, Current Segment End: {current_segment_end_milliseconds}")
-    best_next_songs = find_next_song(current_song_id, current_segment_end_milliseconds)
+    if cache_data:
+        best_next_songs = eval(cache_data)
+    else:
+        best_next_songs = find_next_song(current_song_id, current_segment_end_milliseconds)
+        # Cache the recommended songs
+        await redis.set(cache_key, str(best_next_songs))
+
     response = []
     for song_id, song_name, start_timestamp in best_next_songs:
         readable_seconds = milliseconds_to_readable(start_timestamp)
