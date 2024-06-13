@@ -44,8 +44,9 @@ export const actions: import('./$types').Actions = {
 			};
 		}
 		const currentSegmentEnd = Math.floor(Number(form.get('currentSegmentEnd'))) || 0;
+		const nextSegmentPrefetch = Math.floor(Number(form.get('nextSegmentPrefetch'))) || 0;
 		return {
-			nextBestSongs: await fetchNextBestSongs(songId, currentSegmentEnd)
+			nextBestSongs: await fetchNextBestSongs(songId, currentSegmentEnd, nextSegmentPrefetch)
 		};
 	}
 };

@@ -71,12 +71,16 @@
 		} else {
 			currentTime = multitrack.wavesurfers[trackIndex].getCurrentTime();
 		}
+		console.log('Current time', currentTime, 'for track', trackIndex);
+		const currentSegmentIndex = audioFeatures.segments_boundaries.findIndex((boundary) => {
+			return currentTime < boundary;
+		});
 		const currentSegment =
-			audioFeatures.segments_boundaries.find((boundary) => {
-				return currentTime < boundary;
-			}) || 0;
+			currentSegmentIndex != -1 ? audioFeatures.segments_boundaries[currentSegmentIndex] : 0;
+		console.log('Current segment', currentSegment, 'for track', trackIndex);
 		if (currentSegmentEnd !== currentSegment) {
 			currentSegmentEnd = currentSegment;
+			nextSegmentPrefetch = audioFeatures.segments_boundaries[currentSegmentIndex + 1] || 0;
 		}
 	};
 
@@ -233,6 +237,8 @@
 	let fetchRecommendationsButton: HTMLButtonElement;
 	// current track segment end (position of next black line after cursor relative to the track)
 	$: currentSegmentEnd = 0;
+	// prefetch for the next segment
+	$: nextSegmentPrefetch = 0;
 	// current track segment offset (offset of the track relative to previous track)
 	$: currentSegmentOffset = 0;
 	// width of the track container (fixed once loaded)
@@ -241,15 +247,19 @@
 	$: scrollX = 0;
 	$: fetchingRecommendations = false;
 
-	$: if (currentSegmentEnd !== 0) {
-		fetchRecommendationsButton.click();
-		fetchingRecommendations = true;
-	}
-
 	let zoom = 10; // minPxPerSec
 
 	$: segmentProgress =
 		(((currentSegmentEnd - currentSegmentOffset) * zoom - scrollX) / trackWidth) * 100 || 0;
+
+	// async reactive function to wait for form inputs to load and then fetch recommendations
+	$: (async () => {
+		await tick();
+		if (currentSegmentEnd !== 0) {
+			fetchRecommendationsButton.click();
+			fetchingRecommendations = true;
+		}
+	})();
 
 	let nextBestSongs: RecommendedSong[] = [];
 
@@ -389,6 +399,7 @@
 					>
 						<input name="songId" class="hidden" value={lastTrackSongId} />
 						<input name="currentSegmentEnd" class="hidden" value={currentSegmentEnd} />
+						<input name="nextSegmentPrefetch" class="hidden" value={nextSegmentPrefetch} />
 						<button type="submit" class="hidden" bind:this={fetchRecommendationsButton}>
 							Fetch Recommendations
 						</button>

@@ -35,7 +35,8 @@ export async function fetchSongAudioFeatures(songId: string): Promise<AudioFeatu
 
 export async function fetchNextBestSongs(
 	songId: string,
-	currentSegmentEnd: number
+	currentSegmentEnd: number,
+	nextSegmentPrefetch: number
 ): Promise<RecommendedSong[]> {
 	const url = makeUrl(`/search`);
 	const res = await fetch(url, {
@@ -46,5 +47,15 @@ export async function fetchNextBestSongs(
 		body: JSON.stringify({ current_song_id: songId, current_segment_end: currentSegmentEnd })
 	}).then((res) => res.json());
 	// .catch((err) => handleFetchError(err, 'Error fetching next best songs'));
+
+	// prefetch next segment so it get's cached
+	fetch(url, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ current_song_id: songId, current_segment_end: nextSegmentPrefetch })
+	});
+
 	return res.data as RecommendedSong[];
 }
