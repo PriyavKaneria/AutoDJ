@@ -1,5 +1,6 @@
 polymath/*
 librosa/*
+mxlrc/*
 env
 __pycache__
 autoplaylist/chromedriver-win64/
