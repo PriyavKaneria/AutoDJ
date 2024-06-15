@@ -6,6 +6,7 @@
 	import { tick } from 'svelte';
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
 
+	export let songLibrary: LibrarySong[];
 	export let segmentProgress = 0;
 	export let fetchingRecommendations = false;
 	export let nextBestSongs: RecommendedSong[] = [];
@@ -105,13 +106,17 @@
 								<div class="flex-none rounded-full p-1 text-rose-400 bg-rose-400/10">
 									<div class="h-2 w-2 rounded-full bg-current"></div>
 								</div>
-								<h2 class="min-w-0 text-sm font-semibold leading-6 text-black">
+								<h2 class="min-w-0 text-sm font-semibold leading-6 text-black flex space-x-3">
 									<span class="truncate">{index + 1}. {song.title}</span>
+									<p
+										class="truncate w-52 text-xs font-normal text-gray-500 text-ellipsis leading-6 text-left"
+									>
+										{songLibrary.find((s) => s.id === song.id)?.artist}
+									</p>
 									<input class="hidden" type="text" name="songId" value={song.id} />
 								</h2>
 							</div>
 							<div class="mt-1 flex items-center gap-x-2.5 text-xs leading-5 text-gray-700">
-								<p class="truncate">Artist</p>
 								<svg viewBox="0 0 2 2" class="h-0.5 w-0.5 flex-none fill-gray-300">
 									<circle cx="1" cy="1" r="1" />
 								</svg>

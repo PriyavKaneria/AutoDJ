@@ -111,3 +111,14 @@ async def search(request: SearchRequest, redis: Redis = Depends(get_redis)):
         "message": "Best next songs found.",
         "data": response
     })
+
+@router.get("/clear-cache")
+async def clear_cache(redis: Redis = Depends(get_redis)):
+    '''
+    Clear the cache of recommended songs.
+    '''
+    await redis.flushdb()
+    return JSONResponse({
+        "status": status.HTTP_200_OK,
+        "message": "Cache cleared."
+    })

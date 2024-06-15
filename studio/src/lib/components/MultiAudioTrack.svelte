@@ -17,8 +17,8 @@
 	let waveformContainer: HTMLDivElement;
 
 	$: loadingSong = false;
+	$: isPlaying = false;
 
-	$: isPlaying = multitrack && multitrack.isPlaying();
 	let currentTimeSpan: HTMLSpanElement;
 
 	const loadSong = async (
@@ -141,15 +141,14 @@
 		window.addEventListener('keydown', (event) => {
 			if (event.code === 'Space') {
 				event.preventDefault();
-				multitrack.isPlaying() ? multitrack.pause() : multitrack.play();
-				isPlaying = multitrack.isPlaying();
+				isPlaying = !isPlaying;
 			}
 		});
 
 		if (waveformContainer) {
 			waveformContainer.childNodes[0].addEventListener('scroll', (event) => {
 				scrollX = (event.target as HTMLDivElement).scrollLeft;
-				console.log('Scrolling', scrollX);
+				// console.log('Scrolling', scrollX);
 			});
 		}
 
@@ -178,9 +177,12 @@
 		(() => {
 			currentTimeSpan.innerText = new Date(globalMultitrackTime * 1000).toISOString().substr(14, 5);
 		})();
+
+	$: isPlaying && multitrack && multitrack.play();
+	$: !isPlaying && multitrack && multitrack.pause();
 </script>
 
-<div class="flex flex-col items-start w-full mb-4 gap-3 relative">
+<div class="flex flex-col items-start w-full mb-4 relative">
 	{#if loadingSong}
 		<div class="flex-grow h-32 flex overflow-hidden items-center border border-dashed border-muted">
 			<LottiePlayer
@@ -194,36 +196,42 @@
 		</div>
 	{/if}
 	<!-- Audio Controls -->
-	<div class="flex justify-evenly w-full">
-		<span
-			class="text-xl text-white bg-black p-1 rounded-tr-lg"
-			id="cursor-time"
-			bind:this={currentTimeSpan}>00:00</span
+	<div class="flex justify-start w-full space-x-3">
+		<div
+			class="flex items-center bg-gray-200 rounded-t-lg space-x-3 px-3 border border-dashed border-muted-foreground border-b-0"
 		>
-		<div class="flex items-center bg-black text-white rounded-b-lg">
 			<button
-				class="flex items-center justify-center w-6 h-6 rounded-full p-1.5"
+				class="flex items-center justify-center w-8 h-8 rounded-full p-1.5"
 				on:click={() => multitrack.setTime(multitrack.getCurrentTime() - 5)}
 			>
-				<StepBack class="w-6 h-6 text-white fill-white" />
+				<StepBack class="w-8 h-8 text-zinc-700 fill-zinc-700" />
 			</button>
 			<button
-				class="flex items-center justify-center w-6 h-6 rounded-full p-1.5"
-				on:click={() => (multitrack.isPlaying() ? multitrack.pause() : multitrack.play())}
+				class="flex items-center justify-center w-8 h-8 rounded-full p-1.5"
+				on:click={() => {
+					if (multitrack.isPlaying()) {
+						isPlaying = false;
+					} else {
+						isPlaying = true;
+					}
+				}}
 			>
 				{#if isPlaying}
-					<Pause class="w-6 h-6 text-white fill-white" />
+					<Pause class="w-8 h-8 text-zinc-700 fill-zinc-700" />
 				{:else}
-					<Play class="w-6 h-6 text-white fill-white" />
+					<Play class="w-8 h-8 text-zinc-700 fill-zinc-700" />
 				{/if}
 			</button>
 			<button
-				class="flex items-center justify-center w-6 h-6 rounded-full p-1.5"
+				class="flex items-center justify-center w-8 h-8 rounded-full p-1.5"
 				on:click={() => multitrack.setTime(multitrack.getCurrentTime() + 5)}
 			>
-				<StepForward class="w-6 h-6 text-white fill-white" />
+				<StepForward class="w-8 h-8 text-zinc-700 fill-zinc-700" />
 			</button>
 		</div>
+		<span class="text-2xl p-1 rounded-tr-lg font-mono" id="cursor-time" bind:this={currentTimeSpan}>
+			00:00
+		</span>
 	</div>
 	<div id="timeline" class="w-full" />
 	<div

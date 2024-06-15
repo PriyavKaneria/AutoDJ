@@ -16,14 +16,16 @@
 	import { tick } from 'svelte';
 	import RecommendationBox from './RecommendationBox.svelte';
 
+	export let data: PageData;
+
+	const songLibrary: LibrarySong[] = data.songLibrary;
 	$: tracks = [] as LibrarySong[];
 	$: trackCues = [] as TrackCue[];
 	$: selectedBaseSong = '';
-	$: baseSongData = (data.songLibrary.find((song) => song.id === selectedBaseSong) ||
-		{}) as LibrarySong;
+	$: baseSongData = (songLibrary.find((song) => song.id === selectedBaseSong) || {}) as LibrarySong;
 
 	const getSongData = (songId: string) => {
-		return data.songLibrary.find((song) => song.id === songId) || ({} as LibrarySong);
+		return songLibrary.find((song) => song.id === songId) || ({} as LibrarySong);
 	};
 
 	$: formLoading = false;
@@ -71,13 +73,13 @@
 		} else {
 			currentTime = multitrack.wavesurfers[trackIndex].getCurrentTime();
 		}
-		console.log('Current time', currentTime, 'for track', trackIndex);
+		// console.log('Current time', currentTime, 'for track', trackIndex);
 		const currentSegmentIndex = audioFeatures.segments_boundaries.findIndex((boundary) => {
 			return currentTime < boundary;
 		});
 		const currentSegment =
 			currentSegmentIndex != -1 ? audioFeatures.segments_boundaries[currentSegmentIndex] : 0;
-		console.log('Current segment', currentSegment, 'for track', trackIndex);
+		// console.log('Current segment', currentSegment, 'for track', trackIndex);
 		if (currentSegmentEnd !== currentSegment) {
 			currentSegmentEnd = currentSegment;
 			nextSegmentPrefetch = audioFeatures.segments_boundaries[currentSegmentIndex + 1] || 0;
@@ -278,12 +280,10 @@
 	};
 
 	const nextSongSelectedEvent = async (trackIndex: number) => {
-		multitrack.pause();
 		await tick();
 		await multiAudioTrackComponent.loadNextSong(trackIndex);
+		// todo: handle case where song does not load and time moves ahead of segment
 	};
-
-	export let data: PageData;
 </script>
 
 <div class="hidden h-full flex-col md:flex">
@@ -319,11 +319,11 @@
 					<span class="text-sm font-medium leading-none">
 						Select a base song from the library
 					</span>
-					{#if data.songLibrary.length === 0}
+					{#if songLibrary.length === 0}
 						<span class="text-xs text-muted-foreground">No songs found.</span>
 					{:else}
 						<div class="flex items-center space-x-2">
-							<SongSelector songLibrary={data.songLibrary} bind:selectedValue={selectedBaseSong} />
+							<SongSelector {songLibrary} bind:selectedValue={selectedBaseSong} />
 							<form
 								method="post"
 								action="?/getSongURL"
@@ -357,26 +357,37 @@
 					{/if}
 				{/if}
 				<!-- {#if tracks.length != 0 && !formLoading} -->
-				<div hidden={formLoading || !tracks.length}>
+				<div hidden={formLoading || !tracks.length} class="space-y-5">
 					<!-- Display base song -->
-					<span class="text-md font-medium leading-none">Song - {baseSongData.title}</span>
-					<span class="text-sm text-gray-400">Youtube link : {baseSongData.url}</span>
-					<div class="flex flex-col items-center space-y-2">
-						<div class="w-full" bind:clientWidth={trackWidth}>
-							{#if tracks.length != 0}
-								<a href="/" data-sveltekit-reload>
-									<Button class="">Change base song</Button>
+					<div class="flex w-full justify-between">
+						<div class="flex flex-col w-full gap-3">
+							<span class="text-md font-medium leading-none">Song - {baseSongData.title}</span>
+							<span class="text-sm text-gray-400"
+								>Youtube link :
+								<a href={baseSongData.url} target="_blank" class="text-blue-500">
+									{baseSongData.url}
 								</a>
-							{/if}
-							<MultiAudioTrack
-								{analyzeSong}
-								bind:trackCues
-								bind:multitrack
-								bind:scrollX
-								bind:this={multiAudioTrackComponent}
-								{globalMultitrackTime}
-							/>
+							</span>
 						</div>
+						<div class="flex items-center space-y-2">
+							<div class="w-full">
+								{#if tracks.length != 0}
+									<a href="/" data-sveltekit-reload>
+										<Button class="">Change base song</Button>
+									</a>
+								{/if}
+							</div>
+						</div>
+					</div>
+					<div bind:clientWidth={trackWidth}>
+						<MultiAudioTrack
+							{analyzeSong}
+							bind:trackCues
+							bind:multitrack
+							bind:scrollX
+							bind:this={multiAudioTrackComponent}
+							{globalMultitrackTime}
+						/>
 					</div>
 					<!-- analyzeSong -->
 					<form
@@ -436,6 +447,7 @@
 								bind:tracks
 								bind:trackCues
 								bind:nextBestSongs
+								{songLibrary}
 								{fetchingRecommendations}
 								{segmentProgress}
 								{analyzeSongTrackIndex}
