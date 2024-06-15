@@ -1,8 +1,6 @@
 import json
 import dill as pickle
 import os
-
-from librosa import frames_to_time
 import numpy as np
 
 from server.models.AudioFeatures import AudioFeatures
@@ -40,12 +38,14 @@ def load_audio_features(file_path: str) -> AudioFeatures:
 
 # Function to generate and save feature vectors if not exists
 def generate_feature_vectors(song_database: Database):
+    print("Generating feature vectors...")
     feature_vectors = []
     vector_mapping = []
     # Iterate over all songs in the database	
     for song_id in song_database:
         # Load audio features
-        audio_features = load_audio_features(song_id)
+        audio_features = load_audio_features(f"polymath/library/{song_id}.a")
+        print(f"Processing {song_id}")
         if audio_features is not None:
             # For every segment in the song, extract the tempo, pitch, timbre, and intensity
             # and create a feature vector mapped to the song id and segment index
@@ -162,8 +162,11 @@ def custom_frame_to_time(frame: int) -> float:
     
     # # Convert indices to time frames
     # segment_boundaries_frames = segment_boundaries_indices * hop_length
-    
     # # Convert time frames to timestamps
     # segment_boundaries_timestamps = segment_boundaries_frames / sr
 
-    return frames_to_time(frame, sr=sr, hop_length=hop_length)
+    # Taken from librosa.frames_to_time
+    # frames to sampples
+    samples = (np.asanyarray(frame) * hop_length).astype(int)
+    # samples to time
+    return np.asanyarray(samples) / float(sr)
