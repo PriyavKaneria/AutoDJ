@@ -15,7 +15,7 @@
 	let value = '';
 
 	const library = songLibrary.reduce((acc: any, song) => {
-		acc[song.id.toLowerCase()] = song.name;
+		acc[song.id.toLowerCase()] = song.title;
 		return acc;
 	}, {});
 	$: selectedValueName = library[value.toLowerCase()] ?? '';
@@ -61,13 +61,22 @@
 					{#each songLibrary as song}
 						<Command.Item
 							value={song.id}
-							class="aria-selected:bg-primary aria-selected:text-primary-foreground text-ellipsis"
+							class="aria-selected:bg-primary aria-selected:text-primary-foreground text-ellipsis group flex space-x-3 justify-between"
 							onSelect={(currentValue) => {
 								value = currentValue;
 								closeAndFocusTrigger(ids.trigger);
 							}}
 						>
-							{song.name}
+							<div class="flex flex-col w-full">
+								<span class="text-left w-full">
+									{song.title}
+								</span>
+								<span
+									class="text-muted-foreground group-hover:text-muted group-aria-selected:text-muted text-xs truncate max-w-52"
+								>
+									{song.artist}
+								</span>
+							</div>
 							<Check
 								class={cn('ml-auto h-4 w-4', value === song.id ? 'opacity-100' : 'opacity-0')}
 							/>

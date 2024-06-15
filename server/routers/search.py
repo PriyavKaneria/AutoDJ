@@ -58,7 +58,7 @@ def find_next_song(current_song_id: str, current_segment_end: int):
         audio_features = load_audio_features(f"{library_path}/{next_song}.a")
         beats = audio_features.beats
         start_timestamp = float(beats[beat_offset]) * 1000
-        best_next_songs.append((next_song, song_metadata["name"], start_timestamp))
+        best_next_songs.append((next_song, song_metadata["title"], start_timestamp))
 
     return best_next_songs
 
@@ -97,12 +97,12 @@ async def search(request: SearchRequest, redis: Redis = Depends(get_redis)):
         await redis.set(cache_key, str(best_next_songs))
 
     response = []
-    for song_id, song_name, start_timestamp in best_next_songs:
+    for song_id, song_title, start_timestamp in best_next_songs:
         readable_seconds = milliseconds_to_readable(start_timestamp)
         # print(f"Id: {song_id}, Name: {song_name}, Start Timestamp: {readable_seconds}")
         response.append({
             "id": song_id,
-            "name": song_name,
+            "title": song_title,
             "start_timestamp": readable_seconds,
             "start_milliseconds": start_timestamp
         })

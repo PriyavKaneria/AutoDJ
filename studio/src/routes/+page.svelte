@@ -120,6 +120,8 @@
 						'timeupdate',
 						() => {
 							onTrackTimeUpdate(trackIndex);
+							// update global time
+							globalMultitrackTime = multitrack.getCurrentTime();
 						},
 						{
 							signal: prevAudioElementEventAbortController.signal
@@ -235,6 +237,8 @@
 	};
 
 	let fetchRecommendationsButton: HTMLButtonElement;
+	$: fetchingRecommendations = false;
+
 	// current track segment end (position of next black line after cursor relative to the track)
 	$: currentSegmentEnd = 0;
 	// prefetch for the next segment
@@ -245,7 +249,8 @@
 	$: trackWidth = 0;
 	// scroll position of the global track container
 	$: scrollX = 0;
-	$: fetchingRecommendations = false;
+	// Global multitrack time
+	$: globalMultitrackTime = 0;
 
 	let zoom = 10; // minPxPerSec
 
@@ -354,7 +359,7 @@
 				<!-- {#if tracks.length != 0 && !formLoading} -->
 				<div hidden={formLoading || !tracks.length}>
 					<!-- Display base song -->
-					<span class="text-md font-medium leading-none">Song - {baseSongData.name}</span>
+					<span class="text-md font-medium leading-none">Song - {baseSongData.title}</span>
 					<span class="text-sm text-gray-400">Youtube link : {baseSongData.url}</span>
 					<div class="flex flex-col items-center space-y-2">
 						<div class="w-full" bind:clientWidth={trackWidth}>
@@ -369,6 +374,7 @@
 								bind:multitrack
 								bind:scrollX
 								bind:this={multiAudioTrackComponent}
+								{globalMultitrackTime}
 							/>
 						</div>
 					</div>

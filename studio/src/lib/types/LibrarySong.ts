@@ -4,4 +4,6 @@ export interface LibrarySong {
 	name: string;
 	video: string;
 	audio: string;
+	title: string;
+	artist: string;
 }

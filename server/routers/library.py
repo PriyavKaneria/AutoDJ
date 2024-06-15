@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
 from server.models.database import Database
-from server.models.video import Video
 from server.redis_cache import get_redis
 from server.utils import NumpyValuesEncoder, custom_frame_to_time, load_audio_features
 
@@ -18,12 +17,14 @@ if not os.path.exists(library_path):
     raise Exception("Song library not found")
 
 song_database : Database = {}
-with open(rf'{library_path}/database.p', 'rb') as f:
-    raw_song_database = pickle.load(f)
+with open(rf'{library_path}/database.json', 'rb') as f:
+    # raw_song_database = pickle.load(f)
+    raw_song_database = json.load(f)
     library_files = [f for f in os.listdir(library_path) if f.endswith(".a")]
     for key in raw_song_database:
-        if f"{key.id}.a" in library_files:
-            song_database[key.id] = key.__dict__
+        if f"{key['id']}.a" in library_files:
+            # song_database[key['id']] = key.__dict__
+            song_database[key['id']] = key
 
 @router.get("/library")
 def get_song_library():

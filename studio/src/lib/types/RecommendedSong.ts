@@ -1,6 +1,6 @@
 export interface RecommendedSong {
 	id: string;
-	name: string;
+	title: string;
 	start_timestamp: string;
 	start_milliseconds: number;
 }

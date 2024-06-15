@@ -12,6 +12,7 @@
 	export let multitrack: MultiTrack;
 	export let scrollX = 0;
 	export let trackCues: TrackCue[] = [];
+	export let globalMultitrackTime: number;
 
 	let waveformContainer: HTMLDivElement;
 
@@ -79,6 +80,8 @@
 				]
 			}
 		});
+
+		// add the lyrics button
 
 		loadingSong = false;
 	};
@@ -169,6 +172,12 @@
 		const nextTrackData = trackCues[trackIndex];
 		await loadSong(trackIndex, nextTrackData.url, nextTrackData?.startFrom, nextTrackData?.cueFrom);
 	};
+
+	$: globalMultitrackTime &&
+		currentTimeSpan &&
+		(() => {
+			currentTimeSpan.innerText = new Date(globalMultitrackTime * 1000).toISOString().substr(14, 5);
+		})();
 </script>
 
 <div class="flex flex-col items-start w-full mb-4 gap-3 relative">

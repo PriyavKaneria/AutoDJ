@@ -106,7 +106,7 @@
 									<div class="h-2 w-2 rounded-full bg-current"></div>
 								</div>
 								<h2 class="min-w-0 text-sm font-semibold leading-6 text-black">
-									<span class="truncate">{index + 1}. {song.name}</span>
+									<span class="truncate">{index + 1}. {song.title}</span>
 									<input class="hidden" type="text" name="songId" value={song.id} />
 								</h2>
 							</div>
