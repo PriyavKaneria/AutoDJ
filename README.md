@@ -42,3 +42,4 @@ audio_features
 - [ ] Show lyrics on track hover (curved fade out on ends)
   - [ ] Show lyrics while in recommendation box
 - [ ] Allow song search and add track (other than base track)
+- [ ] Multiple cursors for independent mixing and playing

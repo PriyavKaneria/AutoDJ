@@ -12,7 +12,6 @@
 	import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
 	import EnvelopePlugin from 'wavesurfer.js/dist/plugins/envelope.js';
 	import type MultiTrack from 'wavesurfer-multitrack';
-	import { invalidateAll } from '$app/navigation';
 	import { tick } from 'svelte';
 	import RecommendationBox from './RecommendationBox.svelte';
 
@@ -286,7 +285,7 @@
 	};
 </script>
 
-<div class="hidden h-full flex-col md:flex">
+<div class="h-full flex flex-col">
 	<div
 		class="container flex flex-col items-start justify-between space-y-2 py-4 sm:flex-row sm:items-center sm:space-y-0 md:h-16"
 	>
@@ -329,7 +328,7 @@
 								action="?/getSongURL"
 								use:enhance={() => {
 									formLoading = true;
-									return async ({ update, result }) => {
+									return async ({ result }) => {
 										// update();
 										handleSongURL(result);
 										await tick();
@@ -381,6 +380,7 @@
 					</div>
 					<div bind:clientWidth={trackWidth}>
 						<MultiAudioTrack
+							maxTracks="10"
 							{analyzeSong}
 							bind:trackCues
 							bind:multitrack
@@ -395,7 +395,7 @@
 						action="?/analyzeSong"
 						class="hidden"
 						use:enhance={() => {
-							return async ({ update, result }) => {
+							return async ({ result }) => {
 								handleSongSegments(result);
 							};
 						}}
@@ -409,7 +409,7 @@
 						action="?/getNextBestSongs"
 						class="hidden"
 						use:enhance={() => {
-							return async ({ update, result }) => {
+							return async ({ result }) => {
 								handleSongRecommendation(result);
 							};
 						}}

@@ -1,13 +1,17 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
 	import Hover from 'wavesurfer.js/dist/plugins/hover.js';
 	import TimelinePlugin from 'wavesurfer.js/plugins/timeline';
 	import ZoomPlugin from 'wavesurfer.js/plugins/zoom';
 	import MultiTrack from 'wavesurfer-multitrack';
-	import { Pause, Play, StepBack, StepForward } from 'lucide-svelte';
+	import { MicVocal, Pause, Play, StepBack, StepForward } from 'lucide-svelte';
 	import type { TrackCue } from '$lib/types';
+	import Button from './ui/button/button.svelte';
+	import * as Select from './ui/select';
+	import { lyrics } from '$lib/utils';
 
+	export let maxTracks: number = 5;
 	export let analyzeSong: (trackIndex: number) => void;
 	export let multitrack: MultiTrack;
 	export let scrollX = 0;
@@ -20,6 +24,14 @@
 	$: isPlaying = false;
 
 	let currentTimeSpan: HTMLSpanElement;
+	let lyricsButton: HTMLDivElement;
+
+	const initTrackConfigs = Array.from({ length: maxTracks }, (_, id) => ({ id, startPosition: 0 }));
+	let lyricsButtons: HTMLDivElement[] = Array.from({ length: maxTracks });
+	let lyricsSelections: {
+		label: string;
+		value: string;
+	}[] = Array.from({ length: maxTracks });
 
 	const loadSong = async (
 		trackIndex: number,
@@ -82,48 +94,31 @@
 		});
 
 		// add the lyrics button
+		// create copy of the lyrics button and append it to the waveform container
+		if (trackIndex < lyricsButtons.length) {
+			const lyricsButton = lyricsButtons[trackIndex];
+			lyricsButton.style.display = 'block';
+			lyricsButton.style.top = `${50 + trackIndex * 120}px`;
+			waveformContainer.appendChild(lyricsButton);
+		}
 
 		loadingSong = false;
 	};
 
 	onMount(() => {
-		multitrack = MultiTrack.create(
-			[
-				{
-					id: 0,
-					startPosition: 0
-				},
-				{
-					id: 1,
-					startPosition: 0
-				},
-				{
-					id: 2,
-					startPosition: 0
-				},
-				{
-					id: 3,
-					startPosition: 0
-				},
-				{
-					id: 4,
-					startPosition: 0
-				}
-			],
-			{
-				container: waveformContainer,
-				cursorColor: '#000',
-				cursorWidth: 1,
-				rightButtonDrag: true,
-				trackBackground: '#fff',
-				trackBorderColor: '#000',
-				minPxPerSec: 10,
-				// dragBounds: true,
-				timelineOptions: {
-					// height: 0
-				}
+		multitrack = MultiTrack.create(initTrackConfigs, {
+			container: waveformContainer,
+			cursorColor: '#000',
+			cursorWidth: 1,
+			rightButtonDrag: true,
+			trackBackground: '#fff',
+			trackBorderColor: '#000',
+			minPxPerSec: 10,
+			// dragBounds: true,
+			timelineOptions: {
+				// height: 0
 			}
-		);
+		});
 
 		// Set sinkId
 		multitrack.once('canplay', async () => {
@@ -238,6 +233,31 @@
 		class="flex-grow w-full bg-muted border border-dashed border-muted-foreground track"
 		bind:this={waveformContainer}
 	/>
+	<!-- hidden lyrics button elements -->
+	{#each initTrackConfigs as trackConfig}
+		<div class="hidden absolute top-10 -right-12" bind:this={lyricsButtons[trackConfig.id]}>
+			<Select.Root
+				bind:selected={lyricsSelections[trackConfig.id]}
+				onSelectedChange={async () => {
+					await tick();
+					// show selected lyrics
+				}}
+			>
+				<Select.Trigger class="w-min p-0">
+					<Button class="p-2 bg-primary rounded-lg">
+						<MicVocal class="w-5 h-5 text-primary-foreground" />
+					</Button>
+				</Select.Trigger>
+				<Select.Content side="right" sameWidth={false}>
+					{#each lyrics.slice(0, 3) as lrc}
+						<Select.Item class="w-auto" value={lrc.id}>
+							{lrc.trackName} - {lrc.albumName}
+						</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+		</div>
+	{/each}
 </div>
 
 <style lang="postcss">
