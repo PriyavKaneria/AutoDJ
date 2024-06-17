@@ -9,6 +9,7 @@
 	import type { TrackCue } from '$lib/types';
 	import Button from './ui/button/button.svelte';
 	import * as Select from './ui/select';
+	import * as Collapsible from './ui/collapsible';
 	import { lyrics } from '$lib/utils';
 
 	export let maxTracks: number = 5;
@@ -249,11 +250,25 @@
 					</Button>
 				</Select.Trigger>
 				<Select.Content side="right" sameWidth={false}>
-					{#each lyrics.slice(0, 3) as lrc}
-						<Select.Item class="w-auto" value={lrc.id}>
-							{lrc.trackName} - {lrc.albumName}
-						</Select.Item>
-					{/each}
+					<Collapsible.Root class="w-[350px] space-y-2">
+						{#each lyrics.slice(0, 3) as lrc}
+							<Select.Item class="w-auto" value={lrc.id}>
+								{lrc.trackName} - {lrc.albumName}
+							</Select.Item>
+						{/each}
+						<Collapsible.Trigger asChild let:builder>
+							<Button builders={[builder]} variant="ghost" class="float-right">
+								<span class="w-full"> View more... </span>
+							</Button>
+						</Collapsible.Trigger>
+						<Collapsible.Content>
+							{#each lyrics.slice(3, -1) as lrc}
+								<Select.Item class="w-auto" value={lrc.id}>
+									{lrc.trackName} - {lrc.albumName}
+								</Select.Item>
+							{/each}
+						</Collapsible.Content>
+					</Collapsible.Root>
 				</Select.Content>
 			</Select.Root>
 		</div>

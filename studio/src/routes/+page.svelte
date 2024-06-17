@@ -380,7 +380,7 @@
 					</div>
 					<div bind:clientWidth={trackWidth}>
 						<MultiAudioTrack
-							maxTracks="10"
+							maxTracks={10}
 							{analyzeSong}
 							bind:trackCues
 							bind:multitrack
