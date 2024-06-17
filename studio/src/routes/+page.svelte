@@ -14,6 +14,7 @@
 	import type MultiTrack from 'wavesurfer-multitrack';
 	import { tick } from 'svelte';
 	import RecommendationBox from './RecommendationBox.svelte';
+	import { Loader2 } from 'lucide-svelte';
 
 	export let data: PageData;
 
@@ -30,12 +31,14 @@
 	$: formLoading = false;
 
 	$: songURL = '';
+	$: lrcLyrics = [];
 	$: analyzingSong = false;
 
 	const handleSongURL = (result: ActionResult) => {
 		if (result.type === 'success' && result.data) {
 			if (result.data.songURL) {
 				songURL = result.data.songURL;
+				lrcLyrics = result.data.lrcLyrics;
 			}
 		}
 	};
@@ -338,10 +341,10 @@
 											{
 												url: songURL,
 												startFrom: 0,
-												cueFrom: 0
+												cueFrom: 0,
+												lrcLyrics: lrcLyrics
 											}
 										];
-										console.log(tracks, trackCues);
 										await tick();
 
 										await multiAudioTrackComponent.loadNextSong(0);
@@ -350,12 +353,21 @@
 								}}
 							>
 								<input type="hidden" name="songId" value={selectedBaseSong} />
-								<Button type="submit">Load</Button>
+								<input type="hidden" name="songTitle" value={baseSongData.title} />
+								<Button type="submit" disabled={selectedBaseSong == ''}>
+									{#if formLoading}
+										<div class="flex space-x-2 items-center">
+											<Loader2 class="w-6 h-6 animate-spin" />
+											<span>Loading</span>
+										</div>
+									{:else}
+										Load
+									{/if}
+								</Button>
 							</form>
 						</div>
 					{/if}
 				{/if}
-				<!-- {#if tracks.length != 0 && !formLoading} -->
 				<div hidden={formLoading || !tracks.length} class="space-y-5">
 					<!-- Display base song -->
 					<div class="flex w-full justify-between">

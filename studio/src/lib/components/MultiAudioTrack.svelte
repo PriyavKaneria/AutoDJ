@@ -10,7 +10,6 @@
 	import Button from './ui/button/button.svelte';
 	import * as Select from './ui/select';
 	import * as Collapsible from './ui/collapsible';
-	import { lyrics } from '$lib/utils';
 
 	export let maxTracks: number = 5;
 	export let analyzeSong: (trackIndex: number) => void;
@@ -243,33 +242,42 @@
 					await tick();
 					// show selected lyrics
 				}}
+				disabled={(trackCues[trackConfig.id]?.lrcLyrics || []).length === 0}
 			>
 				<Select.Trigger class="w-min p-0">
 					<Button class="p-2 bg-primary rounded-lg">
 						<MicVocal class="w-5 h-5 text-primary-foreground" />
 					</Button>
 				</Select.Trigger>
-				<Select.Content side="right" sameWidth={false}>
-					<Collapsible.Root class="w-[350px] space-y-2">
-						{#each lyrics.slice(0, 3) as lrc}
-							<Select.Item class="w-auto" value={lrc.id}>
-								{lrc.trackName} - {lrc.albumName}
-							</Select.Item>
-						{/each}
-						<Collapsible.Trigger asChild let:builder>
-							<Button builders={[builder]} variant="ghost" class="float-right">
-								<span class="w-full"> View more... </span>
-							</Button>
-						</Collapsible.Trigger>
-						<Collapsible.Content>
-							{#each lyrics.slice(3, -1) as lrc}
+				{#if trackCues[trackConfig.id] && trackCues[trackConfig.id].lrcLyrics}
+					<Select.Content side="right" sameWidth={false}>
+						<Collapsible.Root class="w-[350px] space-y-2">
+							{#each (trackCues[trackConfig.id].lrcLyrics || []).slice(0, 3) as lrc}
 								<Select.Item class="w-auto" value={lrc.id}>
-									{lrc.trackName} - {lrc.albumName}
+									<div class="flex flex-col w-full">
+										<span>{lrc.trackName} - {lrc.albumName}</span>
+										<span class="text-xs truncate w-[90%]">{lrc.artistName}</span>
+									</div>
 								</Select.Item>
 							{/each}
-						</Collapsible.Content>
-					</Collapsible.Root>
-				</Select.Content>
+							<Collapsible.Trigger asChild let:builder>
+								<Button builders={[builder]} variant="ghost" class="float-right">
+									<span class="w-full"> View more... </span>
+								</Button>
+							</Collapsible.Trigger>
+							<Collapsible.Content>
+								{#each (trackCues[trackConfig.id].lrcLyrics || []).slice(3, 10) as lrc}
+									<Select.Item class="w-auto" value={lrc.id}>
+										<div class="flex flex-col w-full">
+											<span>{lrc.trackName} - {lrc.albumName}</span>
+											<span class="text-xs truncate w-[90%]">{lrc.artistName}</span>
+										</div>
+									</Select.Item>
+								{/each}
+							</Collapsible.Content>
+						</Collapsible.Root>
+					</Select.Content>
+				{/if}
 			</Select.Root>
 		</div>
 	{/each}

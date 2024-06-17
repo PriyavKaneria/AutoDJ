@@ -1,4 +1,5 @@
 import {
+	fetchLrclibLyrics,
 	fetchNextBestSongs,
 	fetchSongAudioFeatures,
 	fetchSongLibrary,
@@ -16,14 +17,17 @@ export const actions: import('./$types').Actions = {
 	getSongURL: async ({ request }) => {
 		const form = await request.formData();
 		const songId = (form.get('songId') as string) || '';
+		const songTitle = (form.get('songTitle') as string) || '';
 		// const startFrom = Math.floor(Number(form.get('startFrom'))) || 0;
 		if (songId === '') {
 			return {
-				songURL: ''
+				songURL: '',
+				lrcLyrics: []
 			};
 		}
 		return {
-			songURL: await fetchSongURL(songId)
+			songURL: await fetchSongURL(songId),
+			lrcLyrics: await fetchLrclibLyrics(songTitle)
 		};
 	},
 
