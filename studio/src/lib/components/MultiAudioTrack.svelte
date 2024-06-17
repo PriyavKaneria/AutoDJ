@@ -3,7 +3,6 @@
 	import { LottiePlayer } from '@lottiefiles/svelte-lottie-player';
 	import Hover from 'wavesurfer.js/dist/plugins/hover.js';
 	import TimelinePlugin from 'wavesurfer.js/plugins/timeline';
-	import ZoomPlugin from 'wavesurfer.js/plugins/zoom';
 	import MultiTrack from 'wavesurfer-multitrack';
 	import { MicVocal, Pause, Play, StepBack, StepForward } from 'lucide-svelte';
 	import type { TrackCue } from '$lib/types';
@@ -24,12 +23,11 @@
 	$: isPlaying = false;
 
 	let currentTimeSpan: HTMLSpanElement;
-	let lyricsButton: HTMLDivElement;
 
 	const initTrackConfigs = Array.from({ length: maxTracks }, (_, id) => ({ id, startPosition: 0 }));
 	let lyricsButtons: HTMLDivElement[] = Array.from({ length: maxTracks });
 	let lyricsSelections: {
-		label: string;
+		key: string;
 		value: string;
 	}[] = Array.from({ length: maxTracks });
 
@@ -237,10 +235,27 @@
 	{#each initTrackConfigs as trackConfig}
 		<div class="hidden absolute top-10 -right-12" bind:this={lyricsButtons[trackConfig.id]}>
 			<Select.Root
-				bind:selected={lyricsSelections[trackConfig.id]}
-				onSelectedChange={async () => {
-					await tick();
+				onSelectedChange={async (value) => {
 					// show selected lyrics
+					const selectedLyrics = (trackCues[trackConfig.id].lrcLyrics || []).find(
+						(lrc) => lrc.id === value?.value
+					);
+					if (!selectedLyrics) return;
+					if (selectedLyrics.syncedLyrics) {
+						// parse the string
+						const lyrics = selectedLyrics.syncedLyrics.split('\n');
+						lyrics.forEach((lyric) => {
+							// lyric format : [hh:mm:ss] text
+							// remove '[' from the start of the string
+							lyric = lyric.replace('[', '');
+							const [time, text] = lyric.split(']');
+							const [minutes, seconds] = time.split(':');
+							const timeInSeconds = parseInt(minutes) * 60 + parseInt(seconds);
+							console.log('Time:', timeInSeconds, 'Text:', text);
+						});
+					} else {
+						// TODO : handle plain lyrics
+					}
 				}}
 				disabled={(trackCues[trackConfig.id]?.lrcLyrics || []).length === 0}
 			>

@@ -7,5 +7,5 @@ export interface LrcLibLyrics {
 	duration: number;
 	instrumental: boolean;
 	plainLyrics: string;
-	syncedLyrics: null;
+	syncedLyrics: string;
 }
