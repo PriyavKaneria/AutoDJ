@@ -6,4 +6,5 @@ export interface LibrarySong {
 	audio: string;
 	title: string;
 	artist: string;
+	lrcOffset?: number;
 }

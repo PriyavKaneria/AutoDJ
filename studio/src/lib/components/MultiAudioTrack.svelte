@@ -244,15 +244,19 @@
 					if (selectedLyrics.syncedLyrics) {
 						// parse the string
 						const lyrics = selectedLyrics.syncedLyrics.split('\n');
+						let parsedLyrics = [];
+						let lyricsOffset = trackCues[trackConfig.id].lrcOffset || 0;
 						lyrics.forEach((lyric) => {
 							// lyric format : [hh:mm:ss] text
 							// remove '[' from the start of the string
 							lyric = lyric.replace('[', '');
 							const [time, text] = lyric.split(']');
 							const [minutes, seconds] = time.split(':');
-							const timeInSeconds = parseInt(minutes) * 60 + parseInt(seconds);
+							const timeInSeconds = parseInt(minutes) * 60 + parseInt(seconds) - lyricsOffset;
 							console.log('Time:', timeInSeconds, 'Text:', text);
+							parsedLyrics.push([timeInSeconds, text]);
 						});
+						console.log('Parsed Lyrics:', parsedLyrics);
 					} else {
 						// TODO : handle plain lyrics
 					}

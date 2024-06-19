@@ -9,4 +9,5 @@ export interface TrackCue {
 	audioElement?: HTMLAudioElement; // Reference to the audio element
 	scrollX?: number; // Scroll position on the X-axis
 	lrcLyrics?: LrcLibLyrics[]; // Lyrics options of the track fetched from lrclib
+	lrcOffset?: number; // Offset to apply to the lyrics
 }

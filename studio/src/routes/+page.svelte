@@ -342,7 +342,8 @@
 												url: songURL,
 												startFrom: 0,
 												cueFrom: 0,
-												lrcLyrics: lrcLyrics
+												lrcLyrics: lrcLyrics,
+												lrcOffset: baseSongData.lrcOffset
 											}
 										];
 										await tick();
