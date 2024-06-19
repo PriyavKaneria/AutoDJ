@@ -7,6 +7,7 @@
 
 	let waveformContainer: HTMLDivElement;
 	let multitrack: MultiTrack;
+	let scrollX = 0;
 
 	const loadTrack = async () => {
 		const src = 'http://localhost:8000/stream/rW9_-dVCmrM';
@@ -14,6 +15,34 @@
 		const blobURL = URL.createObjectURL(blob);
 		const audioElement = new Audio(blobURL);
 		audioElement.preload = 'metadata';
+		const hoverPlugin = Hover.create({
+			labelSize: 16,
+			lineColor: 'black',
+			lineWidth: 1
+		});
+		hoverPlugin.on('hover', (time) => {
+			const audioDuration = multitrack.wavesurfers[0].getDuration();
+			// position the lyrics component to hover position
+			const clientWidth = waveformContainer.clientWidth;
+			const zoom = 10;
+			const visibleDuration = clientWidth / zoom;
+			// subtract scroll %
+			const scrollPercentage = scrollX / zoom / visibleDuration;
+			console.log('Scroll percentage', scrollPercentage, scrollX);
+			const visibleTimePercentage = (time * audioDuration) / visibleDuration - scrollPercentage;
+			if (visibleTimePercentage > 0.5) {
+				lyricsBox.style.left = `calc( ${visibleTimePercentage * 100}% - 384px )`;
+			} else {
+				lyricsBox.style.left = `${visibleTimePercentage * 100}%`;
+			}
+			lyricsBox.style.top = `${40 + 0 * 120}px`;
+			// get the current lyric index
+			const timeInSeconds = time * audioDuration;
+			const currentLyricIndex = parsedLyrics.findIndex((lyric) => Number(lyric[0]) > timeInSeconds);
+			if (currentLyricIndex > 0) {
+				currentLyricCarouselIndex = currentLyricIndex - 1;
+			}
+		});
 		multitrack.addTrack({
 			id: 0,
 			startPosition: 0,
@@ -36,11 +65,7 @@
 					}
 				],
 				plugins: [
-					Hover.create({
-						labelSize: 16,
-						lineColor: 'black',
-						lineWidth: 1
-					}),
+					hoverPlugin,
 					// ZoomPlugin.create({
 					// 	deltaThreshold: 0,
 					// 	maxZoom: 100
@@ -96,6 +121,12 @@
 			}
 		});
 
+		if (waveformContainer) {
+			waveformContainer.childNodes[0].addEventListener('scroll', (event) => {
+				scrollX = (event.target as HTMLDivElement).scrollLeft;
+				// console.log('Scrolling', scrollX);
+			});
+		}
 		loadTrack();
 
 		return () => {
@@ -104,19 +135,18 @@
 	});
 
 	$: currentLyricCarouselIndex = 0;
-	$: direction = 'down';
 	const handleCarouselNext = () => {
 		if (currentLyricCarouselIndex < parsedLyrics.length - 1) {
-			direction = 'down';
 			currentLyricCarouselIndex += 1;
 		}
 	};
 	const handleCarouselPrev = () => {
 		if (currentLyricCarouselIndex > 0) {
-			direction = 'up';
 			currentLyricCarouselIndex -= 1;
 		}
 	};
+
+	let lyricsBox: HTMLDivElement;
 </script>
 
 <div
@@ -124,38 +154,32 @@
 	bind:this={waveformContainer}
 />
 
-<div class="w-full h-full bg-black">
-	<br />
-	<br />
-	<br />
-	<div class="relative w-96 text-sm text-center flex justify-center align-middle">
+<div class="w-full h-full flex justify-center align-middle pt-16 pb-5 bg-white">
+	<div
+		class="absolute w-96 text-sm text-center flex justify-center align-middle pointer-events-none"
+		bind:this={lyricsBox}
+	>
 		{#each parsedLyrics as lyric, index}
 			<span
-				class={'absolute bg-white rounded-md px-3 w-full truncate ' +
+				class={'absolute bg-white rounded-sm px-3 w-full truncate transition-all duration-300 ease-out ' +
 					(currentLyricCarouselIndex == index
 						? 'block scale-100 z-20'
 						: 'scale-75 text-sm z-10 ' +
 							(index == currentLyricCarouselIndex + 1
-								? 'opacity-50 translate-y-full'
+								? 'opacity-75 translate-y-full'
 								: index == currentLyricCarouselIndex - 1
-									? 'opacity-50 -translate-y-full'
-									: 'hidden'))}
-				class:animate-fade-zoom-in-bottom={direction === 'down' &&
-					index === currentLyricCarouselIndex}
-				class:animate-fade-zoom-in-top={direction === 'up' && index === currentLyricCarouselIndex}
-				class:animate-fade-zoom-out-bottom={direction === 'up' &&
-					index === currentLyricCarouselIndex + 1}
-				class:animate-fade-zoom-out-top={direction === 'down' &&
-					index === currentLyricCarouselIndex - 1}
+									? 'opacity-75 -translate-y-full'
+									: 'opacity-0 ' +
+										(index > currentLyricCarouselIndex
+											? 'translate-y-[200%]'
+											: '-translate-y-[200%]')))}
 			>
 				{lyric[1]}
 			</span>
 		{/each}
 	</div>
-	<br />
-	<br />
-	<br />
 </div>
+&nbsp;
 {currentLyricCarouselIndex}
 <button on:click={handleCarouselPrev}> Prev </button>
 <button on:click={handleCarouselNext}> Next </button>

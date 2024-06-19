@@ -60,38 +60,38 @@ const config = {
 			fontFamily: {
 				sans: [...fontFamily.sans]
 			},
-			keyframes: {
-				'fade-zoom-in-bottom': {
-					'0%': {
-						opacity: '0.5',
-						transform: 'translateY(100%)',
-						scale: '.75'
-					},
-					'100%': {
-						opacity: '1',
-						transform: 'translateY(0)',
-						scale: '1'
-					}
-				},
-				'fade-zoom-out-top': {
-					'0%': {
-						opacity: '1',
-						transform: 'translateY(0)',
-						scale: '1'
-					},
-					'100%': {
-						opacity: '0.5',
-						transform: 'translateY(-100%)',
-						scale: '.75'
-					}
-				}
-			},
-			animation: {
-				'fade-zoom-in-bottom': 'fade-zoom-in-bottom .3s ease-out',
-				'fade-zoom-out-top': 'fade-zoom-out-top .3s ease-out',
-				'fade-zoom-in-top': 'fade-zoom-in-bottom .3s ease-out reverse',
-				'fade-zoom-out-bottom': 'fade-zoom-out-top .3s ease-out reverse'
-			}
+			// keyframes: {
+			// 	'fade-zoom-in-bottom': {
+			// 		'0%': {
+			// 			opacity: '0.5',
+			// 			transform: 'translateY(100%)',
+			// 			scale: '.75'
+			// 		},
+			// 		'100%': {
+			// 			opacity: '1',
+			// 			transform: 'translateY(0)',
+			// 			scale: '1'
+			// 		}
+			// 	},
+			// 	'fade-zoom-out-top': {
+			// 		'0%': {
+			// 			opacity: '1',
+			// 			transform: 'translateY(0)',
+			// 			scale: '1'
+			// 		},
+			// 		'100%': {
+			// 			opacity: '0.5',
+			// 			transform: 'translateY(-100%)',
+			// 			scale: '.75'
+			// 		}
+			// 	}
+			// },
+			// animation: {
+			// 	'fade-zoom-in-bottom': 'fade-zoom-in-bottom 5.3s ease-out',
+			// 	'fade-zoom-out-top': 'fade-zoom-out-top 5.3s ease-out',
+			// 	'fade-zoom-in-top': 'fade-zoom-in-bottom 5.3s ease-out reverse',
+			// 	'fade-zoom-out-bottom': 'fade-zoom-out-top 5.3s ease-out reverse'
+			// }
 		}
 	}
 };
