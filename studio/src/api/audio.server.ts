@@ -28,7 +28,9 @@ export async function fetchLrclibLyrics(songTitle: string): Promise<LrcLibLyrics
 		headers: {
 			'Content-Type': 'application/json'
 		}
-	}).then((res) => res.json());
+	})
+		.then((res) => res.json())
+		.catch(() => []);
 	// .catch((err) => handleFetchError(err, 'Error fetching song lyrics'));
 	let lyrics = res as LrcLibLyrics[];
 	if (!lyrics || lyrics.length === 0) return [];
