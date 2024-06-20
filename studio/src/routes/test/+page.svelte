@@ -39,9 +39,7 @@
 			// get the current lyric index
 			const timeInSeconds = time * audioDuration;
 			const currentLyricIndex = parsedLyrics.findIndex((lyric) => Number(lyric[0]) > timeInSeconds);
-			if (currentLyricIndex > 0) {
-				currentLyricCarouselIndex = currentLyricIndex - 1;
-			}
+			currentLyricCarouselIndex = currentLyricIndex;
 		});
 		multitrack.addTrack({
 			id: 0,
