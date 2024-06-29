@@ -43,14 +43,17 @@
 					currentSegmentOffset
 				);
 
+				const songData = getSongData(song.id);
 				const nextTrackData = {
 					url: nextSongURL,
 					startFrom: nextSongStartFrom,
-					cueFrom: nextSongCueFrom
+					cueFrom: nextSongCueFrom,
+					lrcLyrics: result.data.lrcLyrics,
+					lrcOffset: songData.lrcOffset
 				};
+				console.log('Next track data', nextTrackData);
 				trackCues = [...trackCues, nextTrackData];
 				nextSongSelectedEvent(analyzeSongTrackIndex + 1);
-				const songData = getSongData(song.id);
 				// replace the analyzeSongTrackIndex + 1 track with the new song
 				// clear all tracks after analyzeSongTrackIndex + 1
 				if (analyzeSongTrackIndex >= tracks.length) {
@@ -114,6 +117,7 @@
 										{songLibrary.find((s) => s.id === song.id)?.artist}
 									</p>
 									<input class="hidden" type="text" name="songId" value={song.id} />
+									<input type="hidden" name="songTitle" value={song.title} />
 								</h2>
 							</div>
 							<div class="mt-1 flex items-center gap-x-2.5 text-xs leading-5 text-gray-700">

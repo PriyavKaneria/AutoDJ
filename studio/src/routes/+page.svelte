@@ -346,6 +346,8 @@
 												lrcOffset: baseSongData.lrcOffset
 											}
 										];
+										console.log(lrcLyrics);
+
 										await tick();
 
 										await multiAudioTrackComponent.loadNextSong(0);
@@ -397,7 +399,7 @@
 							{analyzeSong}
 							bind:trackCues
 							bind:multitrack
-							bind:scrollX
+							bind:waveformScrollX={scrollX}
 							bind:this={multiAudioTrackComponent}
 							{globalMultitrackTime}
 						/>

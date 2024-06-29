@@ -9,15 +9,20 @@
 	import Button from './ui/button/button.svelte';
 	import * as Select from './ui/select';
 	import * as Collapsible from './ui/collapsible';
+	import type HoverPlugin from 'wavesurfer.js/dist/plugins/hover.js';
+	import type { Selected } from 'bits-ui';
+	import ScrollLyrics from './ScrollLyrics.svelte';
 
 	export let maxTracks: number = 5;
 	export let analyzeSong: (trackIndex: number) => void;
 	export let multitrack: MultiTrack;
-	export let scrollX = 0;
+	export let waveformScrollX = 0;
 	export let trackCues: TrackCue[] = [];
 	export let globalMultitrackTime: number;
 
 	let waveformContainer: HTMLDivElement;
+	let clientWidth = 0;
+	const zoom = 10;
 
 	$: loadingSong = false;
 	$: isPlaying = false;
@@ -26,10 +31,8 @@
 
 	const initTrackConfigs = Array.from({ length: maxTracks }, (_, id) => ({ id, startPosition: 0 }));
 	let lyricsButtons: HTMLDivElement[] = Array.from({ length: maxTracks });
-	let lyricsSelections: {
-		key: string;
-		value: string;
-	}[] = Array.from({ length: maxTracks });
+	let parsedLyricsTracks: [number, string][][] = Array.from({ length: maxTracks });
+	let hoverPluginInstances: HoverPlugin[] = Array.from({ length: maxTracks });
 
 	const loadSong = async (
 		trackIndex: number,
@@ -49,6 +52,13 @@
 		trackCues[trackIndex].audioElement = audioElement;
 
 		console.log('Loading song', _songURL, 'at', trackStartFrom, 'with cue from', trackCueFrom);
+
+		const hoverPluginInstance = Hover.create({
+			labelSize: 16,
+			lineColor: 'black',
+			lineWidth: 1
+		});
+		hoverPluginInstances[trackIndex] = hoverPluginInstance;
 
 		multitrack.addTrack({
 			id: trackIndex,
@@ -74,11 +84,7 @@
 					}
 				],
 				plugins: [
-					Hover.create({
-						labelSize: 16,
-						lineColor: 'black',
-						lineWidth: 1
-					}),
+					hoverPluginInstance,
 					// ZoomPlugin.create({
 					// 	deltaThreshold: 0,
 					// 	maxZoom: 100
@@ -111,7 +117,7 @@
 			rightButtonDrag: true,
 			trackBackground: '#fff',
 			trackBorderColor: '#000',
-			minPxPerSec: 10,
+			minPxPerSec: zoom,
 			// dragBounds: true,
 			timelineOptions: {
 				// height: 0
@@ -138,18 +144,24 @@
 			}
 		});
 
-		if (waveformContainer) {
-			waveformContainer.childNodes[0].addEventListener('scroll', (event) => {
-				scrollX = (event.target as HTMLDivElement).scrollLeft;
-				// console.log('Scrolling', scrollX);
-			});
-		}
-
 		return () => {
 			multitrack.destroy();
 			loadingSong = false;
 		};
 	});
+
+	$: waveformContainer &&
+		waveformContainer.childNodes.length > 0 &&
+		(() => {
+			waveformContainer.childNodes.forEach((child) => {
+				if (child instanceof HTMLDivElement && child.style.overflowX == 'scroll') {
+					child.addEventListener('scroll', (event) => {
+						waveformScrollX = (event.target as HTMLDivElement).scrollLeft;
+						// console.log('Scrolling', waveformScrollX);
+					});
+				}
+			});
+		})();
 
 	export const loadNextSong = async (trackIndex: number) => {
 		console.log('Loading next song', trackIndex, 'from', trackCues.length, 'tracks');
@@ -173,6 +185,37 @@
 
 	$: isPlaying && multitrack && multitrack.play();
 	$: !isPlaying && multitrack && multitrack.pause();
+
+	const handleSelectedLyric = async (
+		value: Selected<unknown> | undefined,
+		trackConfig: { id: number }
+	) => {
+		// show selected lyrics
+		const selectedLyrics = (trackCues[trackConfig.id].lrcLyrics || []).find(
+			(lrc) => lrc.id === value?.value
+		);
+		if (!selectedLyrics) return;
+		if (selectedLyrics.syncedLyrics) {
+			// parse the string
+			const lyrics = selectedLyrics.syncedLyrics.split('\n');
+			let parsedLyrics: [number, string][] = [];
+			let lyricsOffset = trackCues[trackConfig.id].lrcOffset || 0;
+			lyrics.forEach((lyric) => {
+				// lyric format : [hh:mm:ss] text
+				// remove '[' from the start of the string
+				lyric = lyric.replace('[', '');
+				const [time, text] = lyric.split(']');
+				const [minutes, seconds] = time.split(':');
+				const timeInSeconds = parseInt(minutes) * 60 + parseInt(seconds) - lyricsOffset;
+				console.log('Time:', timeInSeconds, 'Text:', text);
+				parsedLyrics.push([timeInSeconds, text]);
+			});
+			// console.log('Parsed Lyrics:', parsedLyrics);
+			parsedLyricsTracks[trackConfig.id] = parsedLyrics;
+		} else {
+			// TODO : handle plain lyrics
+		}
+	};
 </script>
 
 <div class="flex flex-col items-start w-full mb-4 relative">
@@ -230,37 +273,13 @@
 	<div
 		class="flex-grow w-full bg-muted border border-dashed border-muted-foreground track"
 		bind:this={waveformContainer}
+		bind:clientWidth
 	/>
 	<!-- hidden lyrics button elements -->
 	{#each initTrackConfigs as trackConfig}
 		<div class="hidden absolute top-10 -right-12" bind:this={lyricsButtons[trackConfig.id]}>
 			<Select.Root
-				onSelectedChange={async (value) => {
-					// show selected lyrics
-					const selectedLyrics = (trackCues[trackConfig.id].lrcLyrics || []).find(
-						(lrc) => lrc.id === value?.value
-					);
-					if (!selectedLyrics) return;
-					if (selectedLyrics.syncedLyrics) {
-						// parse the string
-						const lyrics = selectedLyrics.syncedLyrics.split('\n');
-						let parsedLyrics = [];
-						let lyricsOffset = trackCues[trackConfig.id].lrcOffset || 0;
-						lyrics.forEach((lyric) => {
-							// lyric format : [hh:mm:ss] text
-							// remove '[' from the start of the string
-							lyric = lyric.replace('[', '');
-							const [time, text] = lyric.split(']');
-							const [minutes, seconds] = time.split(':');
-							const timeInSeconds = parseInt(minutes) * 60 + parseInt(seconds) - lyricsOffset;
-							console.log('Time:', timeInSeconds, 'Text:', text);
-							parsedLyrics.push([timeInSeconds, text]);
-						});
-						console.log('Parsed Lyrics:', parsedLyrics);
-					} else {
-						// TODO : handle plain lyrics
-					}
-				}}
+				onSelectedChange={(value) => handleSelectedLyric(value, trackConfig)}
 				disabled={(trackCues[trackConfig.id]?.lrcLyrics || []).length === 0}
 			>
 				<Select.Trigger class="w-min p-0">
@@ -299,6 +318,16 @@
 				{/if}
 			</Select.Root>
 		</div>
+		<ScrollLyrics
+			hoverPluginInstance={hoverPluginInstances[trackConfig.id]}
+			parsedLyrics={parsedLyricsTracks[trackConfig.id]}
+			trackIndex={trackConfig.id}
+			trackStartFrom={trackCues[trackConfig.id]?.startFrom || 0}
+			{multitrack}
+			{clientWidth}
+			{zoom}
+			scrollX={waveformScrollX}
+		/>
 	{/each}
 </div>
 

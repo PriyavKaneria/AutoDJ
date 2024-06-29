@@ -4,10 +4,14 @@
 	import Hover from 'wavesurfer.js/dist/plugins/hover.js';
 	import TimelinePlugin from 'wavesurfer.js/plugins/timeline';
 	import { parsedLyrics } from '$lib/utils';
+	import type HoverPlugin from 'wavesurfer.js/dist/plugins/hover.js';
+	import ScrollLyrics from '$lib/components/ScrollLyrics.svelte';
 
 	let waveformContainer: HTMLDivElement;
 	let multitrack: MultiTrack;
 	let scrollX = 0;
+	let hoverPlugin: HoverPlugin;
+	let clientWidth = 0;
 
 	const loadTrack = async () => {
 		const src = 'http://localhost:8000/stream/rW9_-dVCmrM';
@@ -15,31 +19,10 @@
 		const blobURL = URL.createObjectURL(blob);
 		const audioElement = new Audio(blobURL);
 		audioElement.preload = 'metadata';
-		const hoverPlugin = Hover.create({
+		hoverPlugin = Hover.create({
 			labelSize: 16,
 			lineColor: 'black',
 			lineWidth: 1
-		});
-		hoverPlugin.on('hover', (time) => {
-			const audioDuration = multitrack.wavesurfers[0].getDuration();
-			// position the lyrics component to hover position
-			const clientWidth = waveformContainer.clientWidth;
-			const zoom = 10;
-			const visibleDuration = clientWidth / zoom;
-			// subtract scroll %
-			const scrollPercentage = scrollX / zoom / visibleDuration;
-			console.log('Scroll percentage', scrollPercentage, scrollX);
-			const visibleTimePercentage = (time * audioDuration) / visibleDuration - scrollPercentage;
-			if (visibleTimePercentage > 0.5) {
-				lyricsBox.style.left = `calc( ${visibleTimePercentage * 100}% - 384px )`;
-			} else {
-				lyricsBox.style.left = `${visibleTimePercentage * 100}%`;
-			}
-			lyricsBox.style.top = `${40 + 0 * 120}px`;
-			// get the current lyric index
-			const timeInSeconds = time * audioDuration;
-			const currentLyricIndex = parsedLyrics.findIndex((lyric) => Number(lyric[0]) > timeInSeconds);
-			currentLyricCarouselIndex = currentLyricIndex;
 		});
 		multitrack.addTrack({
 			id: 0,
@@ -124,6 +107,7 @@
 				scrollX = (event.target as HTMLDivElement).scrollLeft;
 				// console.log('Scrolling', scrollX);
 			});
+			clientWidth = waveformContainer.clientWidth;
 		}
 		loadTrack();
 
@@ -132,19 +116,8 @@
 		};
 	});
 
-	$: currentLyricCarouselIndex = 0;
-	const handleCarouselNext = () => {
-		if (currentLyricCarouselIndex < parsedLyrics.length - 1) {
-			currentLyricCarouselIndex += 1;
-		}
-	};
-	const handleCarouselPrev = () => {
-		if (currentLyricCarouselIndex > 0) {
-			currentLyricCarouselIndex -= 1;
-		}
-	};
-
 	let lyricsBox: HTMLDivElement;
+	let zoom = 10;
 </script>
 
 <div
@@ -153,31 +126,12 @@
 />
 
 <div class="w-full h-full flex justify-center align-middle pt-16 pb-5 bg-white">
-	<div
-		class="absolute w-96 text-sm text-center flex justify-center align-middle pointer-events-none"
-		bind:this={lyricsBox}
-	>
-		{#each parsedLyrics as lyric, index}
-			<span
-				class={'absolute bg-white rounded-sm px-3 w-full truncate transition-all duration-300 ease-out ' +
-					(currentLyricCarouselIndex == index
-						? 'block scale-100 z-20'
-						: 'scale-75 text-sm z-10 ' +
-							(index == currentLyricCarouselIndex + 1
-								? 'opacity-75 translate-y-full'
-								: index == currentLyricCarouselIndex - 1
-									? 'opacity-75 -translate-y-full'
-									: 'opacity-0 ' +
-										(index > currentLyricCarouselIndex
-											? 'translate-y-[200%]'
-											: '-translate-y-[200%]')))}
-			>
-				{lyric[1]}
-			</span>
-		{/each}
-	</div>
+	<ScrollLyrics
+		hoverPluginInstance={hoverPlugin}
+		{parsedLyrics}
+		{multitrack}
+		{clientWidth}
+		{zoom}
+		{scrollX}
+	/>
 </div>
-&nbsp;
-{currentLyricCarouselIndex}
-<button on:click={handleCarouselPrev}> Prev </button>
-<button on:click={handleCarouselNext}> Next </button>

@@ -60,7 +60,7 @@ export function handleFetchError(err: Error, message: string) {
 	throw err;
 }
 
-export const parsedLyrics = [
+export const parsedLyrics: [number, string][] = [
 	[20, ' Saturday saturday'],
 	[20, ' Phela ta kudi ne ludhiana vi ni tappeya si tappeya si'],
 	[28, ' Phela ta kudi ne ludhiana vi ni tappeya'],
