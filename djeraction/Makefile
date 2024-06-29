@@ -4,7 +4,7 @@ VENV = env
 PIP = $(VENV)/scripts/pip.exe
 PYTHON_VENV = $(VENV)/scripts/python.exe
 SCRIPT = dj_audience_counter.py
-IMAGE_PATH = images/lots_of_tiny.jpg
+IMAGE_PATH = images/plain.png
 
 # Targets
 .PHONY: all setup install run-opinion run-battle clean

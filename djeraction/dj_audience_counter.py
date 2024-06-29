@@ -122,7 +122,7 @@ def draw_flashlights_and_count_left_right(img, flashlights, mid, delay=0.001) ->
 
     for idx, cnt in enumerate(flashlights):
         x, y, w, h = cv2.boundingRect(cnt)
-        cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        cv2.circle(img, (x+w//2, y+h//2), 1, (0, 255, 0), 2)
         if x < mid:
             left_count += 1
             # clear count image
@@ -137,7 +137,20 @@ def draw_flashlights_and_count_left_right(img, flashlights, mid, delay=0.001) ->
             cv2.imshow("Right Count", count_img_right)
 
         cv2.imshow("Battle", img)
-        cv2.waitKey(1)
+        if idx % 3 == 0:
+            cv2.waitKey(1)
+            img_copy = img.copy()
+            # Highlight winning side
+            winner_overlay = np.zeros_like(img)
+            if left_count > right_count:
+                winner_overlay[:, :mid] = [0, 255, 0]
+            elif right_count > left_count:
+                winner_overlay[:, mid:] = [0, 255, 0]
+            
+            cv2.addWeighted(img_copy, 1, winner_overlay, 0.5, 0, img_copy)
+            cv2.imshow("Battle", img_copy)
+            cv2.waitKey(1)
+
         # time.sleep(delay)  # Staggered animation delay - not needed for cv2.waitKey
     return (img, (left_count, right_count))
 
@@ -168,13 +181,13 @@ def battle_opinion(image_path="", image = None):
     cv2.moveWindow("Battle", 300, 200)
     img_with_boxes, (left_count, right_count) = draw_flashlights_and_count_left_right(img.copy(), flashlights, mid)
     cv2.imshow("Battle", img_with_boxes)
-    
+
     # Highlight winning side
     winner_overlay = np.zeros_like(img)
     if left_count > right_count:
-        winner_overlay[:, :mid] = [0, 0, 255]  # Red for left side
+        winner_overlay[:, :mid] = [0, 255, 0]
     elif right_count > left_count:
-        winner_overlay[:, mid:] = [0, 255, 0]  # Green for right side
+        winner_overlay[:, mid:] = [0, 255, 0]
     
     cv2.addWeighted(img_with_boxes, 1, winner_overlay, 0.5, 0, img_with_boxes)
     cv2.imshow("Battle", img_with_boxes)
