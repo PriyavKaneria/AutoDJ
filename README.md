@@ -43,6 +43,7 @@ audio_features
 - [.] Extract audio features on server (later)
 - [.] Allow song search and add track (other than base track) (later)
 - [ ] Multiple cursors for independent mixing and playing
+- [ ] Proper bpm mixing using transition beat samples
 - [ ] Actual indian dj recommendation
   - [ ] Collect dataset
   - [ ] Identify tracks and timings
