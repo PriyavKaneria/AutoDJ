@@ -150,6 +150,7 @@
 		};
 	});
 
+	let waveformScrollXContainer: HTMLDivElement;
 	$: waveformContainer &&
 		waveformContainer.childNodes.length > 0 &&
 		(() => {
@@ -159,6 +160,23 @@
 						waveformScrollX = (event.target as HTMLDivElement).scrollLeft;
 						// console.log('Scrolling', waveformScrollX);
 					});
+
+					waveformScrollXContainer = child;
+				}
+			});
+		})();
+
+	$: multitrack &&
+		multitrack.wavesurfers &&
+		multitrack.wavesurfers.length > 0 &&
+		(() => {
+			// Remove click event listener from the direct child of this element to remove multitrack interaction
+			waveformScrollXContainer.childNodes.forEach((childNode) => {
+				if (childNode instanceof HTMLDivElement) {
+					const ref = (childNode as any).lastListenerInfo;
+					if (ref) {
+						childNode.removeEventListener(ref[0].type, ref[0].listener);
+					}
 				}
 			});
 		})();
@@ -216,9 +234,26 @@
 			// TODO : handle plain lyrics
 		}
 	};
+
+	const handleTrackRightClick = (e: Event) => {
+		e.preventDefault();
+		// const _target = e.target as HTMLElement;
+		// if (!_target || !_target.parentElement || !_target.parentNode || !_target.parentNode.parentNode)
+		// 	return;
+		// // index of the target div's parent node under grandparent
+		// // ignore all the even number nodes in the grandparent children
+		// const _trackIndex = Array.from(_target.parentNode.parentNode.children)
+		// 	.filter((_, i) => i % 2)
+		// 	.indexOf(_target.parentElement);
+		// // console.log('Clicked on trackindex', _trackIndex);
+	};
 </script>
 
-<div class="flex flex-col items-start w-full mb-4 relative">
+<div
+	class="flex flex-col items-start w-full mb-4 relative"
+	role="contentinfo"
+	on:contextmenu={handleTrackRightClick}
+>
 	{#if loadingSong}
 		<div class="flex-grow h-32 flex overflow-hidden items-center border border-dashed border-muted">
 			<LottiePlayer
