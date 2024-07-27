@@ -1,4 +1,14 @@
 # AutoDJ
+A DJ studio that analyzes, recommends and mixes bollywood songs
+
+It's a work in progress. Made during [Buildspace Nights&Weekends season 5](https://sage.buildspace.so/demos/autodj-f7QRANH)
+
+
+Check out the [demo](https://youtu.be/evsJogMdXu4?feature=shared) below!
+
+https://github.com/user-attachments/assets/09e9544e-b17e-496d-94b2-de55ec186f3c
+
+
 
 ```
 database
